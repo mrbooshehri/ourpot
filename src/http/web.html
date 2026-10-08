@@ -14,6 +14,7 @@
       <div><a class="brand" href="/">Ourpot</a><p class="subtle">Shared money planning for two</p></div>
       <nav id="appNav" hidden aria-label="Main navigation">
         <button type="button" id="dashboardNav">Dashboard</button>
+        <button type="button" id="adminNav" hidden>Administration</button>
         <button type="button" id="settingsNav">Settings</button>
         <button type="button" id="logoutButton">Sign out</button>
       </nav>
@@ -31,18 +32,23 @@
             <button>Sign in</button>
           </form>
           <button type="button" id="passkeyLoginButton" class="secondary" hidden>Sign in with a passkey</button>
-          <details><summary>Create an account</summary>
-            <form id="registerForm" class="stack inset">
-              <label>Email<input name="email" type="email" autocomplete="email" required></label>
-              <label>Password <span class="hint">(at least 12 characters)</span><input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
-              <button>Create account</button>
-            </form>
-          </details>
+          <p class="hint">Accounts are created by the administrator or through a household invitation.</p>
         </div>
         <div class="card stack" id="mfaPanel" hidden>
           <h2>Authenticator code</h2><p>Enter your current six-digit code or a recovery code.</p>
           <form id="mfaForm" class="stack"><label>Code<input name="code" autocomplete="one-time-code" required></label><button>Continue</button></form>
           <button type="button" id="mfaBackButton" class="secondary">Back to sign in</button>
+        </div>
+      </section>
+
+      <section id="passwordChangePanel" hidden class="stack">
+        <h1>Change your temporary password</h1>
+        <div class="card"><p class="hint">Your administrator gave you a temporary password. Set a private password before continuing.</p>
+          <form id="passwordChangeForm" class="stack"><label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+            <label>New password <span class="hint">(at least 12 characters)</span><input name="newPassword" type="password" minlength="12" autocomplete="new-password" required></label>
+            <button>Save new password</button>
+          </form>
+          <button type="button" id="passwordChangeLogoutButton" class="secondary">Sign out</button>
         </div>
       </section>
 
@@ -58,6 +64,14 @@
           <div class="card"><h2>Join your partner</h2><p>Use the invitation link your partner shared with you.</p><form id="acceptInviteForm" class="stack">
             <label>Invitation token<input name="token" required></label><button>Join household</button>
           </form></div>
+        </div>
+      </section>
+
+      <section id="adminPanel" hidden class="stack">
+        <div class="page-heading"><div><h1>Administration</h1><p class="subtle">Create accounts for household members and share their temporary credentials securely.</p></div></div>
+        <div class="grid two">
+          <div class="card"><h2>Create user</h2><form id="adminUserForm" class="stack"><label>Email<input name="email" type="email" required></label><label>Temporary password<input name="temporaryPassword" type="password" minlength="12" required></label><button>Create user</button></form><p id="adminUserResult" class="hint"></p></div>
+          <div class="card"><h2>Users</h2><ul id="adminUserList" class="compact-list"></ul></div>
         </div>
       </section>
 
@@ -118,7 +132,9 @@
           <div class="card stack"><h2>Authenticator-app MFA</h2><p id="mfaStatus">Loading…</p>
             <p class="hint">Before enabling MFA, save your recovery codes. If you lose every sign-in method, this version has no self-service account recovery.</p>
             <button type="button" id="startMfaButton">Set up authenticator</button>
-            <div id="mfaSetup" hidden class="stack inset"><p>Add this secret to your authenticator app:</p><code id="mfaSecret" class="wrap"></code>
+            <div id="mfaSetup" hidden class="stack inset"><p>Scan this QR code with your authenticator app, or enter the setup key manually:</p>
+              <img id="mfaQrCode" class="mfa-qr" alt="Authenticator setup QR code">
+              <div class="mfa-manual-key"><span>Manual setup key</span><code id="mfaSecret" class="wrap"></code></div>
               <form id="confirmMfaForm" class="stack"><label>Current six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" required></label><button>Enable MFA</button></form>
             </div>
             <div id="recoveryPanel" hidden><h3>Save these recovery codes now</h3><p>Each code works once. They will not appear again.</p><pre id="recoveryCodes" class="wrap"></pre></div>

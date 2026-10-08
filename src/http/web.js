@@ -9,7 +9,7 @@
   }
 
   function show(panel) {
-    for (const id of ['authPanel', 'setupPanel', 'dashboardPanel', 'settingsPanel']) $(id).hidden = id !== panel;
+    for (const id of ['authPanel', 'passwordChangePanel', 'setupPanel', 'dashboardPanel', 'settingsPanel', 'adminPanel']) $(id).hidden = id !== panel;
     $('appNav').hidden = panel === 'authPanel';
   }
 
@@ -18,7 +18,11 @@
     if (body !== undefined) headers['content-type'] = 'application/json';
     const response = await fetch(path, { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : JSON.stringify(body) });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Request failed');
+    if (!response.ok) {
+      const error = new Error(data.error || 'Request failed');
+      if (typeof data.retryAfterSeconds === 'number') error.retryAfterSeconds = data.retryAfterSeconds;
+      throw error;
+    }
     return data;
   }
 
@@ -39,7 +43,9 @@
     return el;
   }
   async function perform(work) {
-    try { status(''); await work(); } catch (error) { status(error.message || 'Request failed'); }
+    try { status(''); await work(); } catch (error) {
+      status(error.retryAfterSeconds ? `${error.message} You can try again when the timer expires.` : (error.message || 'Request failed'));
+    }
   }
   function bindForm(id, handler) {
     $(id).addEventListener('submit', (event) => {
@@ -52,7 +58,10 @@
     try {
       const me = await api('/api/auth/me');
       hasHousehold = !!me.household;
-      if (hasHousehold) { show('dashboardPanel'); await dashboard(); }
+      $('adminNav').hidden = me.systemRole !== 'root_admin';
+      if (me.mustChangePassword) show('passwordChangePanel');
+      else if (me.systemRole === 'root_admin') { show('adminPanel'); await adminUsers(); }
+      else if (hasHousehold) { show('dashboardPanel'); await dashboard(); }
       else show('setupPanel');
     } catch (error) {
       if (error.message === 'Authentication required') show('authPanel');
@@ -133,10 +142,6 @@
     }
   }
 
-  bindForm('registerForm', async (values) => {
-    await api('/api/auth/register', 'POST', values);
-    await passwordLogin(values);
-  });
   bindForm('loginForm', passwordLogin);
   bindForm('mfaForm', async (values) => {
     await api('/api/auth/mfa', 'POST', values);
@@ -165,18 +170,30 @@
   ]) bindForm(id, async (values) => { await api(path, 'POST', values); status(success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
+  $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
   $('settingsNav').addEventListener('click', () => perform(settings));
   $('logoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
+  $('passwordChangeLogoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
+  bindForm('passwordChangeForm', async (values) => { await api('/api/auth/change-password', 'POST', values); await checkAuth(); status('Password changed.', true); });
+  async function adminUsers() {
+    const data = await api('/api/admin/users');
+    const list = $('adminUserList'); list.replaceChildren();
+    for (const user of data.users) item(list, user.email + (user.systemRole === 'root_admin' ? ' · administrator' : '') + (user.mustChangePassword ? ' · password change required' : '') + (user.disabledAt ? ' · disabled' : ''));
+  }
+  bindForm('adminUserForm', async (values) => { const result = await api('/api/admin/users', 'POST', values); $('adminUserResult').textContent = result.user.email + ' created. Share the temporary password securely; it must be changed at first login.'; await adminUsers(); });
   bindForm('reauthForm', async (values) => { await api('/api/auth/reauthenticate', 'POST', values); status('Identity confirmed. You can now change sign-in methods.', true); });
   $('startMfaButton').addEventListener('click', () => perform(async () => {
     const result = await api('/api/settings/mfa/setup', 'POST', {});
     $('mfaSecret').textContent = new URL(result.otpauthUri).searchParams.get('secret') || '';
+    $('mfaQrCode').src = result.qrCodeDataUrl;
     $('mfaSetup').hidden = false;
-    status('Add the secret to your authenticator, then enter a code.', true);
+    status('Scan the QR code or enter the setup key, then enter a code.', true);
   }));
   bindForm('confirmMfaForm', async (values) => {
     const result = await api('/api/settings/mfa/confirm', 'POST', values);
     $('mfaSetup').hidden = true;
+    $('mfaQrCode').removeAttribute('src');
+    $('mfaSecret').textContent = '';
     $('recoveryCodes').textContent = result.recoveryCodes.join('\n');
     $('recoveryPanel').hidden = false;
     await settings(); status('MFA enabled. Save your recovery codes now.', true);

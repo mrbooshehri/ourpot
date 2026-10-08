@@ -10,14 +10,14 @@ The current HTTP app creates demo users, trusts `x-user-id` and `x-household-id`
 
 ## Product behavior
 
-1. The first partner registers with email and password and creates a household. The owner invites the second partner with a seven-day, single-use link addressed to their email. The recipient registers if needed, then accepts the invitation. A household has at most two active partners; it may contain only the owner before acceptance.
+1. Public registration is disabled. When no root administrator exists, deployment creates one from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`; the root must change that password on first login. The root can create users with temporary passwords, while a household owner can invite the second partner through a seven-day, single-use link addressed to their email. A household has at most two active partners; it may contain only the owner before acceptance.
 2. A partner signs in with email and password. If authenticator-app MFA is enabled, a correct TOTP code or unused recovery code is required before a session is issued. A partner can choose to enable or disable this MFA in Settings.
 3. A partner can add one or more passkeys in Settings. A registered passkey is a passwordless alternative for sign-in even when TOTP MFA is enabled. Registration and sign-in require the device to verify the user with a PIN, biometric, or equivalent mechanism. A partner retains their password as a fallback.
 4. Settings shows only the signed-in partner's active sessions, including the current session, creation time, most recent activity, and browser/device description. Revoking another session makes it unusable on its next request. Revoking the current session signs out the browser.
 5. Settings also lists the partner's passkeys, shows the count of unused recovery codes, supports recovery-code regeneration, and permits removing a passkey or disabling TOTP. Adding/removing security methods or regenerating codes requires recent reauthentication.
 6. Both partners see all household accounts and transactions after sign-in. The server checks current active membership on every household read and write. A removed member's existing session remains valid for their own Settings and sign-out, but no longer grants household access.
 
-Invitation links are shared manually in this MVP; the app does not send email. Registration does not verify email ownership. The secret invitation token and exact registered email match are both required for acceptance. Self-service password reset and external email delivery are deferred. A partner who loses all sign-in methods cannot recover access through the app in this version; this limit must be stated in the UI before MFA enrollment.
+Invitation links are shared manually in this MVP; the app does not send email. The secret invitation token and exact user email match are both required for acceptance. Temporary-password users must change their password before using protected features. Self-service password reset and external email delivery are deferred. A partner who loses all sign-in methods cannot recover access through the app in this version; this limit must be stated in the UI before MFA enrollment.
 
 ## Architecture and data flow
 
@@ -56,9 +56,9 @@ Security events record registration, login success/failure, MFA enrollment/remov
 
 ## UI and API behavior
 
-The responsive web app has registration, password sign-in, MFA challenge, passkey sign-in, and Settings views. The passkey option appears only when the browser supports it, with password sign-in always available. Settings identifies the current session and gives each session a clear revoke control. Confirmation and error states explain whether a session was revoked or a code was invalid without exposing sensitive account details.
+The responsive web app has password sign-in, forced password change, MFA challenge, passkey sign-in, Settings, and root administration views. The passkey option appears only when the browser supports it, with password sign-in always available. Settings identifies the current session and gives each session a clear revoke control. Confirmation and error states explain whether a session was revoked or a code was invalid without exposing sensitive account details.
 
-The API has separate unauthenticated endpoints for registration, password login, MFA completion, and passkey login ceremonies; authenticated endpoints for current user, household selection, logout, session listing/revocation, MFA setup/removal, recovery-code regeneration, and passkey registration/removal. Existing financial endpoints require a session and derive the user from it. `POST /api/demo/setup` and the identity headers are removed from the production flow.
+The API has unauthenticated endpoints for password login, MFA completion, and passkey login ceremonies; authenticated endpoints for password change, current user, root user administration, household selection, logout, session listing/revocation, MFA setup/removal, recovery-code regeneration, and passkey registration/removal. Public registration is disabled. Existing financial endpoints require a session and derive the user from it. `POST /api/demo/setup` and the identity headers are removed from the production flow.
 
 ## Failure handling and verification
 

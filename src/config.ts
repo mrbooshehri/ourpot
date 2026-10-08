@@ -6,6 +6,8 @@ export type AppConfig = Readonly<{
   rpId: string;
   totpEncryptionKey: string | null;
   allowInsecureLocalhostCookie: boolean;
+  bootstrapAdminEmail: string | null;
+  bootstrapAdminPassword: string | null;
 }>;
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): AppConfig {
@@ -45,6 +47,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (environment === 'production' && (origin.protocol !== 'https:' || !totpEncryptionKey)) {
     throw new Error('Production authentication requires HTTPS PUBLIC_ORIGIN and TOTP_ENCRYPTION_KEY');
   }
+  const bootstrapAdminEmail = env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase() || null;
+  const bootstrapAdminPassword = env.BOOTSTRAP_ADMIN_PASSWORD || null;
+  if ((bootstrapAdminEmail === null) !== (bootstrapAdminPassword === null)) {
+    throw new Error('BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD must be provided together');
+  }
+  if (bootstrapAdminEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bootstrapAdminEmail) || bootstrapAdminPassword!.length < 12)) {
+    throw new Error('Bootstrap admin email or password is invalid');
+  }
   return {
     environment,
     port,
@@ -53,5 +63,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     rpId,
     totpEncryptionKey,
     allowInsecureLocalhostCookie,
+    bootstrapAdminEmail,
+    bootstrapAdminPassword,
   };
 }

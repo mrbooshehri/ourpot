@@ -12,13 +12,55 @@ import type { PublicUser, LoginResult, SessionPrincipal, SessionView, SessionIss
 const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
 const DAY = 24 * 60 * 60 * 1000;
 const DUMMY_PASSWORD_HASH = '$argon2id$v=19$m=65536,t=2,p=1$loYQjtdHrGLPdI2DY4NCxP+yILUJs3IKo/Nc+NRTOIo$qgCz4dZPgHIm4rpLlCYG0lQYNriHawwDET8fp7b/mAE';
-type SessionRow = { id: string; user_id: string; created_at: Date; last_used_at: Date; expires_at: Date; idle_expires_at: Date; revoked_at: Date | null; user_agent: string; sign_in_method: string; recent_auth_at: Date | null };
+export class RateLimitError extends Error {
+  constructor(public readonly retryAfterSeconds: number) {
+    super('Too many attempts. Try again later');
+    this.name = 'RateLimitError';
+  }
+}
+type SessionRow = { id: string; user_id: string; created_at: Date; last_used_at: Date; expires_at: Date; idle_expires_at: Date; revoked_at: Date | null; user_agent: string; sign_in_method: string; recent_auth_at: Date | null; system_role: 'root_admin' | 'user'; must_change_password: boolean; disabled_at: Date | null };
 const sessionView = (row: SessionRow): SessionView => ({ id: row.id, createdAt: row.created_at, lastUsedAt: row.last_used_at, expiresAt: row.expires_at, userAgent: row.user_agent, signInMethod: row.sign_in_method });
 
 export class IdentityService {
   private readonly users: IdentityRepository;
   constructor(private readonly db: DatabaseClient, private readonly config: AppConfig) {
     this.users = new IdentityRepository(db);
+  }
+
+  async ensureBootstrapAdmin(): Promise<void> {
+    if (await this.users.findRootAdmin()) return;
+    if (!this.config.bootstrapAdminEmail || !this.config.bootstrapAdminPassword) {
+      throw new Error('No root administrator exists. Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD before starting the server');
+    }
+    const hash = await hashPassword(this.config.bootstrapAdminPassword);
+    try {
+      const admin = await this.users.createUser(this.config.bootstrapAdminEmail, hash, { systemRole: 'root_admin', mustChangePassword: true });
+      await this.event(admin.id, admin.email, 'bootstrap_admin_created', 'success');
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errno' in error && String(error.errno) === '23505' && await this.users.findRootAdmin()) return;
+      throw error;
+    }
+  }
+
+  async createManagedUser(email: string, temporaryPassword: string): Promise<PublicUser> {
+    const user = await this.users.createUser(email, await hashPassword(temporaryPassword), { mustChangePassword: true });
+    await this.event(user.id, user.email, 'admin_user_created', 'success');
+    return { id: user.id, email: user.email, systemRole: user.systemRole, mustChangePassword: true };
+  }
+
+  async listManagedUsers() {
+    return this.users.listUsers();
+  }
+
+  async changePassword(session: SessionPrincipal, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.users.findUserById(session.userId);
+    if (!user || user.disabledAt || !(await verifyPassword(currentPassword, user.passwordHash))) throw new Error('Invalid credentials');
+    const hash = await hashPassword(newPassword);
+    await this.db.transaction(async (tx) => {
+      await tx.query('UPDATE users SET password_hash = $2, must_change_password = false WHERE id = $1', [session.userId, hash]);
+      await tx.query('UPDATE sessions SET recent_auth_at = now() WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL', [session.sessionId, session.userId]);
+      await this.event(session.userId, user.email, 'password_changed', 'success', tx);
+    });
   }
 
   async register(email: string, password: string, ip = ''): Promise<PublicUser> {
@@ -48,6 +90,10 @@ export class IdentityService {
     const keys = [`password:email:${normalized}`, ...(ip ? [`password:ip:${ip}`] : [])].map(tokenHash);
     await this.assertNotRateLimited(keys);
     const user = await this.users.findUserByEmail(normalized);
+    if (user?.disabledAt) {
+      await this.event(null, normalized, 'password_login', 'failure');
+      throw new Error('Invalid credentials');
+    }
     const valid = await verifyPassword(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
     if (!user || !valid) {
       await this.recordFailure(keys);
@@ -85,17 +131,18 @@ export class IdentityService {
   async getSession(rawToken: string): Promise<SessionPrincipal | null> {
     if (!/^[A-Za-z0-9_-]{40,100}$/.test(rawToken)) return null;
     const result = await this.db.query<SessionRow>(
-      `SELECT id, user_id, created_at, last_used_at, idle_expires_at, expires_at, revoked_at, user_agent, sign_in_method, recent_auth_at
-       FROM sessions WHERE token_hash = $1`, [tokenHash(rawToken)],
+      `SELECT s.id, s.user_id, s.created_at, s.last_used_at, s.idle_expires_at, s.expires_at, s.revoked_at, s.user_agent, s.sign_in_method, s.recent_auth_at,
+              u.system_role, u.must_change_password, u.disabled_at
+       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1`, [tokenHash(rawToken)],
     );
     const row = result.rows[0];
     const now = new Date();
-    if (!row || row.revoked_at || row.expires_at <= now || row.idle_expires_at <= now) return null;
+    if (!row || row.revoked_at || row.disabled_at || row.expires_at <= now || row.idle_expires_at <= now) return null;
     if (now.getTime() - row.last_used_at.getTime() >= 5 * 60 * 1000) {
       await this.db.query('UPDATE sessions SET last_used_at = $1, idle_expires_at = $2 WHERE id = $3 AND revoked_at IS NULL',
         [now, new Date(now.getTime() + DAY), row.id]);
     }
-    return { userId: row.user_id, sessionId: row.id, recentAuthAt: row.recent_auth_at };
+    return { userId: row.user_id, sessionId: row.id, recentAuthAt: row.recent_auth_at, systemRole: row.system_role, mustChangePassword: row.must_change_password };
   }
 
   async listSessions(userId: string): Promise<SessionView[]> {
@@ -471,11 +518,14 @@ export class IdentityService {
 
   private async assertNotRateLimited(keys: string[]): Promise<void> {
     for (const key of keys) {
-      const result = await this.db.query<{ key_hash: string }>(
-        "SELECT key_hash FROM auth_rate_limits WHERE key_hash = $1 AND attempts >= 5 AND window_started_at > now() - interval '15 minutes'",
+      const result = await this.db.query<{ window_started_at: Date }>(
+        "SELECT window_started_at FROM auth_rate_limits WHERE key_hash = $1 AND attempts >= 5 AND window_started_at > now() - interval '15 minutes'",
         [key],
       );
-      if (result.rows.length) throw new Error('Too many attempts. Try again later');
+      if (result.rows.length) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((result.rows[0]!.window_started_at.getTime() + 15 * 60 * 1000 - Date.now()) / 1000));
+        throw new RateLimitError(retryAfterSeconds);
+      }
     }
   }
 

@@ -73,4 +73,5 @@ describe('password sessions', () => {
     }
     await expect(identity.register(email, 'correct horse battery staple', ip)).rejects.toThrow('Too many attempts');
   });
+
 });

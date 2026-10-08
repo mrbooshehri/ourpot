@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { ApiApp } from '../../src/http/api';
 import { createDatabaseClient } from '../../src/db/client';
 import { loadConfig } from '../../src/config';
+import { IdentityService } from '../../src/modules/identity/service';
+import { IdentityRepository } from '../../src/modules/identity/repository';
+import { hashPassword } from '../../src/modules/identity/password';
 import * as OTPAuth from 'otpauth';
 
 const origin = 'http://localhost:3000';
@@ -12,12 +15,13 @@ const post = (path: string, body: unknown, cookie = '') => new Request(`${origin
   headers: { origin, 'x-ourpot-request': '1', 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
   body: JSON.stringify(body),
 });
+const seedUser = async (email: string) => new IdentityService(createDatabaseClient(), config).register(email, 'correct horse battery staple');
 
 describe('authenticated HTTP API', () => {
   it('uses cookie identity for household access and rejects forged headers', async () => {
     const app = new ApiApp(createDatabaseClient(), config);
     const email = `http-${randomUUID()}@example.com`;
-    expect((await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }))).status).toBe(201);
+    await seedUser(email);
     const login = await app.fetch(post('/api/auth/login', { email, password: 'correct horse battery staple' }));
     expect(login.status).toBe(200);
     const cookie = login.headers.get('set-cookie')?.split(';')[0] ?? '';
@@ -48,26 +52,23 @@ describe('authenticated HTTP API', () => {
     expect(response.status).toBe(403);
   });
 
-  it('does not expose PostgreSQL errors when an email is already registered', async () => {
+  it('does not allow public account registration', async () => {
     const app = new ApiApp(createDatabaseClient(), config);
     const email = `duplicate-${randomUUID()}@example.com`;
-    expect((await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }))).status).toBe(201);
-    const duplicate = await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }));
-    expect(duplicate.status).toBe(409);
-    const body = await duplicate.json() as { error: string };
-    expect(body.error).not.toContain('users_email_key');
-    expect(body.error).not.toContain('duplicate key');
+    const response = await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }));
+    expect(response.status).toBe(404);
   });
 
   it('requires an authenticator code after password sign-in when MFA is enabled', async () => {
     const app = new ApiApp(createDatabaseClient(), config);
     const email = `mfa-http-${randomUUID()}@example.com`;
-    await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }));
+    await seedUser(email);
     const first = await app.fetch(post('/api/auth/login', { email, password: 'correct horse battery staple' }));
     const sessionCookie = first.headers.get('set-cookie')?.split(';')[0] ?? '';
     const setup = await app.fetch(post('/api/settings/mfa/setup', {}, sessionCookie));
     expect(setup.status).toBe(200);
-    const { otpauthUri } = await setup.json() as { otpauthUri: string };
+    const { otpauthUri, qrCodeDataUrl } = await setup.json() as { otpauthUri: string; qrCodeDataUrl: string };
+    expect(qrCodeDataUrl.startsWith('data:image/png;base64,')).toBe(true);
     const secret = new URL(otpauthUri).searchParams.get('secret')!;
     const code = OTPAuth.TOTP.generate({ secret: OTPAuth.Secret.fromBase32(secret), period: 30 });
     const confirm = await app.fetch(post('/api/settings/mfa/confirm', { code }, sessionCookie));
@@ -93,5 +94,42 @@ describe('authenticated HTTP API', () => {
     const failed = await app.fetch(post('/api/auth/passkey/login/verify', { response: { id: `unknown-${randomUUID()}` } }, pending));
     expect(failed.status).toBe(401);
     expect(failed.headers.get('set-cookie') ?? '').not.toContain('ourpot_session=');
+  });
+
+  it('explains the rate-limit wait with a retry duration', async () => {
+    const app = new ApiApp(createDatabaseClient(), config);
+    const ip = `http-rate-${randomUUID()}`;
+    const email = `rate-${randomUUID()}@example.com`;
+    const response = await app.fetch(post('/api/auth/register', { email, password: 'correct horse battery staple' }), ip);
+    expect(response.status).toBe(404);
+  });
+
+  it('allows only a root administrator to create users who must change temporary passwords', async () => {
+    const db = createDatabaseClient();
+    const app = new ApiApp(db, config);
+    const repository = new IdentityRepository(db);
+    let rootEmail = `root-${randomUUID()}@example.com`;
+    let root = await repository.findRootAdmin();
+    if (!root) root = await repository.createUser(rootEmail, await hashPassword('root password long enough'), { systemRole: 'root_admin' });
+    else {
+      rootEmail = root.email;
+      await repository.setPassword(root.id, await hashPassword('root password long enough'));
+      await db.query('UPDATE users SET disabled_at = NULL WHERE id = $1', [root.id]);
+    }
+    const login = await app.fetch(post('/api/auth/login', { email: rootEmail, password: 'root password long enough' }));
+    const rootCookie = login.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const createdEmail = `managed-${randomUUID()}@example.com`;
+    const created = await app.fetch(post('/api/admin/users', { email: createdEmail, temporaryPassword: 'temporary password long enough' }, rootCookie));
+    expect(created.status).toBe(201);
+    const managedLogin = await app.fetch(post('/api/auth/login', { email: createdEmail, password: 'temporary password long enough' }));
+    const managedCookie = managedLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const managedMe = await (await app.fetch(new Request(`${origin}/api/auth/me`, { headers: { cookie: managedCookie } }))).json() as { mustChangePassword: boolean };
+    expect(managedMe.mustChangePassword).toBe(true);
+    expect((await app.fetch(new Request(`${origin}/api/dashboard`, { headers: { cookie: managedCookie } }))).status).toBe(403);
+    const normal = await seedUser(`normal-${randomUUID()}@example.com`);
+    const normalLogin = await app.fetch(post('/api/auth/login', { email: normal.email, password: 'correct horse battery staple' }));
+    const normalCookie = normalLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
+    expect((await app.fetch(new Request(`${origin}/api/admin/users`, { headers: { cookie: normalCookie } }))).status).toBe(403);
+    expect(root.systemRole).toBe('root_admin');
   });
 });

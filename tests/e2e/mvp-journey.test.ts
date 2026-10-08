@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { ApiApp } from '../../src/http/api';
 import { createDatabaseClient } from '../../src/db/client';
 import { loadConfig } from '../../src/config';
+import { IdentityService } from '../../src/modules/identity/service';
 
 const origin = 'http://localhost:3000';
 const config = loadConfig({ NODE_ENV: 'test', PUBLIC_ORIGIN: origin, AUTH_ALLOW_INSECURE_LOCALHOST: 'true' });
@@ -17,7 +18,7 @@ async function post(app: ApiApp, path: string, cookie: string, body: unknown): P
 }
 
 async function signIn(app: ApiApp, email: string): Promise<string> {
-  await post(app, '/api/auth/register', '', { email, password: 'correct horse battery staple' });
+  await new IdentityService(createDatabaseClient(), config).register(email, 'correct horse battery staple');
   const response = await app.fetch(new Request(`${origin}/api/auth/login`, {
     method: 'POST', headers: { origin, 'x-ourpot-request': '1', 'content-type': 'application/json' },
     body: JSON.stringify({ email, password: 'correct horse battery staple' }),

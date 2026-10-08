@@ -1,5 +1,5 @@
 import { PostgresHouseholdService } from '../modules/households/postgres-service';
-import { IdentityService } from '../modules/identity/service';
+import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
 import { PlanningService } from '../modules/planning/service';
 import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
@@ -8,9 +8,10 @@ import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
 import { assertMutationAllowed, clearPendingCookie, clearSessionCookie, passkeyChallengeCookie, passkeyLoginToken, passkeyReauthenticationToken, passkeyRegistrationToken, pendingCookie, pendingToken, sessionCookie, sessionToken } from './auth-routes';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
+import QRCode from 'qrcode';
 import { webAsset } from './web';
 
-const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+const json = (body: unknown, status = 200, extraHeaders: Record<string, string> = {}) => Response.json(body, { status, headers: { 'cache-control': 'no-store', ...extraHeaders } });
 
 export class ApiApp {
   readonly households: PostgresHouseholdService;
@@ -35,11 +36,7 @@ export class ApiApp {
 
     try {
       assertMutationAllowed(request, this.config);
-      if (request.method === 'POST' && url.pathname === '/api/auth/register') {
-        const body = await request.json() as Record<string, unknown>;
-        const user = await this.identity.register(String(body.email ?? ''), String(body.password ?? ''), clientIp);
-        return json({ user }, 201);
-      }
+      if (request.method === 'POST' && url.pathname === '/api/auth/register') return json({ error: 'Account creation is invitation-only' }, 404);
       if (request.method === 'POST' && url.pathname === '/api/auth/login') {
         const body = await request.json() as Record<string, unknown>;
         const result = await this.identity.loginPassword(String(body.email ?? ''), String(body.password ?? ''), request.headers.get('user-agent') ?? '', clientIp);
@@ -81,13 +78,28 @@ export class ApiApp {
       const principal = token ? await this.identity.getSession(token) : null;
       if (!principal) return json({ error: 'Authentication required' }, 401);
       if (request.method === 'GET' && url.pathname === '/api/auth/me') {
-        return json({ userId: principal.userId, household: await this.households.findActiveHousehold(principal.userId) });
+        return json({ userId: principal.userId, systemRole: principal.systemRole, mustChangePassword: principal.mustChangePassword, household: await this.households.findActiveHousehold(principal.userId) });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
         await this.identity.logout(token!);
         const response = json({ ok: true });
         response.headers.set('set-cookie', clearSessionCookie(this.config));
         return response;
+      }
+      if (request.method === 'POST' && url.pathname === '/api/auth/change-password') {
+        const body = await request.json() as Record<string, unknown>;
+        await this.identity.changePassword(principal, String(body.currentPassword ?? ''), String(body.newPassword ?? ''));
+        return json({ ok: true });
+      }
+      if (principal.mustChangePassword) return json({ error: 'Password change required' }, 403);
+      if (request.method === 'GET' && url.pathname === '/api/admin/users') {
+        if (principal.systemRole !== 'root_admin') return json({ error: 'Administrator access required' }, 403);
+        return json({ users: await this.identity.listManagedUsers() });
+      }
+      if (request.method === 'POST' && url.pathname === '/api/admin/users') {
+        if (principal.systemRole !== 'root_admin') return json({ error: 'Administrator access required' }, 403);
+        const body = await request.json() as Record<string, unknown>;
+        return json({ user: await this.identity.createManagedUser(String(body.email ?? ''), String(body.temporaryPassword ?? '')) }, 201);
       }
       if (request.method === 'GET' && url.pathname === '/api/settings/sessions') {
         const sessions = await this.identity.listSessions(principal.userId);
@@ -119,7 +131,9 @@ export class ApiApp {
         }
       }
       if (request.method === 'POST' && url.pathname === '/api/settings/mfa/setup') {
-        return json(await this.identity.startTotpEnrollment(principal));
+        const setup = await this.identity.startTotpEnrollment(principal);
+        const qrCodeDataUrl = await QRCode.toDataURL(setup.otpauthUri, { errorCorrectionLevel: 'M', margin: 2, width: 240 });
+        return json({ ...setup, qrCodeDataUrl });
       }
       if (request.method === 'POST' && url.pathname === '/api/settings/mfa/confirm') {
         const body = await request.json() as Record<string, unknown>;
@@ -199,7 +213,12 @@ export class ApiApp {
       if (message === 'Recent authentication required') return json({ error: message }, 403);
       if (message === 'Household access denied' || message === 'Owner access required') return json({ error: message }, 403);
       if (message === 'Session not found') return json({ error: message }, 404);
-      if (message === 'Too many attempts. Try again later') return json({ error: message }, 429);
+      if (error instanceof RateLimitError) {
+        const minutes = Math.floor(error.retryAfterSeconds / 60);
+        const seconds = error.retryAfterSeconds % 60;
+        const wait = minutes > 0 ? `${minutes} minute${minutes === 1 ? '' : 's'}${seconds ? ` ${seconds} seconds` : ''}` : `${seconds} seconds`;
+        return json({ error: `Too many attempts. Try again in about ${wait}.`, retryAfterSeconds: error.retryAfterSeconds }, 429, { 'retry-after': String(error.retryAfterSeconds) });
+      }
       return json({ error: message }, 400);
     }
   }

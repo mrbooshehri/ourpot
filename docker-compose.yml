@@ -10,6 +10,8 @@ services:
       AUTH_ALLOW_INSECURE_LOCALHOST: ${AUTH_ALLOW_INSECURE_LOCALHOST:-true}
       # Development-only fallback; set TOTP_ENCRYPTION_KEY for any persistent deployment.
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
       - "3000:3000"
     depends_on:

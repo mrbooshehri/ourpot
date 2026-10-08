@@ -19,6 +19,7 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 - [Operations](docs/operations.md) — local run, Docker/PostgreSQL setup, migrations, and remaining release validation.
 - [Authentication design](docs/superpowers/specs/2026-10-08-authentication-design.md) — approved behavior for password and passkey sign-in, optional MFA, and active-session management.
 - [Authentication implementation plan](docs/superpowers/plans/2026-10-08-authentication.md) — incremental tests, persistence, API, MFA, passkeys, Settings, and deployment verification.
+- [Admin onboarding plan](docs/superpowers/plans/2026-10-08-admin-controlled-onboarding.md) — bootstrap root administration, forced password changes, and controlled user creation.
 
 ## Proposed small MVP
 

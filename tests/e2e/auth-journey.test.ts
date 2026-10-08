@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { ApiApp } from '../../src/http/api';
 import { createDatabaseClient } from '../../src/db/client';
 import { loadConfig } from '../../src/config';
+import { IdentityService } from '../../src/modules/identity/service';
 
 const origin = 'http://localhost:3000';
 const config = loadConfig({ NODE_ENV: 'test', PUBLIC_ORIGIN: origin, AUTH_ALLOW_INSECURE_LOCALHOST: 'true', TOTP_ENCRYPTION_KEY: 'a'.repeat(64) });
@@ -16,8 +17,7 @@ async function post(app: ApiApp, path: string, body: unknown, cookie = ''): Prom
 }
 async function user(app: ApiApp, label: string) {
   const email = `${label}-${randomUUID()}@example.com`;
-  const register = await post(app, '/api/auth/register', { email, password: 'correct horse battery staple' });
-  const id = ((await register.json()) as { user: { id: string } }).user.id;
+  const id = (await new IdentityService(db, config).register(email, 'correct horse battery staple')).id;
   const login = await post(app, '/api/auth/login', { email, password: 'correct horse battery staple' });
   return { id, email, cookie: login.headers.get('set-cookie')?.split(';')[0] ?? '' };
 }

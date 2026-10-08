@@ -28,7 +28,7 @@ These decisions are intentionally limited to behavior required to implement the 
 - Subscriptions may be shared or assigned to one partner, and both partners can view them. Subscription cadences are monthly and yearly.
 - Renewal reminders go to both partners by default at 30 days and 7 days before renewal. Personal notification settings are deferred.
 - Refunds are recorded as income with a `Refund` category. Chargebacks and other complex reversals are deferred.
-- The first partner registers with email and password and creates the household. The second joins through a seven-day invitation addressed to their email; they register if they do not already have an account.
+- Public registration is disabled. The deployment bootstraps one root administrator from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when no root exists; the root must change that password on first login. The root can create users with temporary passwords, and household owners can invite the second partner with a seven-day link. Automatic email delivery is deferred; links are copied and shared manually in MVP.
 - Passwords use Argon2id. A partner may optionally enable authenticator-app MFA for password sign-in, with one-use recovery codes. A registered passkey provides an alternative to password sign-in and does not require a separate TOTP code.
 - Sign-in creates a revocable, cookie-backed session. Settings shows each partner their own active sessions and lets them revoke any of them, including the current session.
 - Upcoming reminders and audit activity appear on the shared dashboard. Audit history is retained for 12 months. Export is deferred.
@@ -46,7 +46,8 @@ These decisions are intentionally limited to behavior required to implement the 
 
 ### 3.1 Sign-in and account security
 
-- Registration requires an email address and password. Signing in with a password requires a valid authenticator-app code or one-use recovery code when the partner has enabled MFA. No full session is issued before that second step succeeds.
+- Users sign in with an administrator-created email and password. Temporary-password users must change their password before accessing household or administration features. Signing in with a password requires a valid authenticator-app code or one-use recovery code when the user has enabled MFA. No full session is issued before that second step succeeds.
+- The root administrator can list users and create users with temporary passwords from the administration panel. Root administration does not grant household financial access unless the root is also an active household member.
 - Partners may add multiple passkeys after signing in and confirming a recent authentication. A passkey can sign in without a password, including when authenticator-app MFA is enabled. Passkey registration and sign-in require browser user verification such as a device PIN or biometric check.
 - Settings can enable or disable authenticator-app MFA, show unused recovery-code count, regenerate recovery codes, list named passkeys, and remove a passkey. Changing these security methods requires recent authentication. Recovery codes are shown only when generated.
 - Settings lists the partner's own active sessions with creation time, recent activity, device/browser description, and a current-session marker. The partner can revoke another session immediately or sign out the current session. One partner cannot view or revoke the other's sessions.

@@ -24,15 +24,16 @@ Stop the stack with `docker compose down`. Add `-v` only when intentionally dele
 
 Then open `http://localhost:3000`. Set `PORT` to another port if 3000 is already occupied.
 
-The web client supports registration, password sign-in, optional authenticator MFA with recovery codes, passkey sign-in and registration, household creation, and active-session revocation. Financial endpoints are session-protected.
+Before first startup, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` in the environment. The web client supports administrator-controlled onboarding, password sign-in, optional authenticator MFA with recovery codes, passkey sign-in and registration, household creation, and active-session revocation. Financial endpoints are session-protected.
 
 ## PostgreSQL
 
-For a new Compose volume, PostgreSQL applies `0001_initial.sql`, `0002_authentication.sql`, and `0003_passkey_reauthentication.sql` automatically. For an existing volume, apply new migrations explicitly:
+For a new Compose volume, PostgreSQL applies `0001_initial.sql` through `0004_admin_onboarding.sql` automatically. For an existing volume, apply new migrations explicitly:
 
 ```bash
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0002_authentication.sql
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0003_passkey_reauthentication.sql
+docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0004_admin_onboarding.sql
 ```
 
 Set `DATABASE_URL`, `PUBLIC_ORIGIN`, `WEBAUTHN_RP_ID`, and a random 32-byte hex `TOTP_ENCRYPTION_KEY` for deployments. HTTP localhost mode is enabled only by the explicit development setting in Compose.
@@ -41,7 +42,7 @@ Required production checks before release:
 
 1. Run the migrations against a disposable PostgreSQL instance.
 2. Run the full database-backed test suite and typecheck.
-3. Start the server and exercise registration, password login, MFA, passkey, household, and session flows in a browser at desktop and narrow widths.
+3. Start the server and exercise bootstrap admin login, forced password change, user creation, password login, MFA, passkey, household, and session flows in a browser at desktop and narrow widths.
 4. Exercise account, transaction, transfer, budget, goal, task, subscription, and reminder flows after financial persistence is complete.
 5. Configure secrets, backups, restore testing, health checks, structured logs, and a rollback procedure.
 
