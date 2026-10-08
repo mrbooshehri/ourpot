@@ -1,0 +1,50 @@
+services:
+  web:
+    build: .
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DATABASE_URL: postgresql://ourpot:ourpot@postgres:5432/ourpot
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      AUTH_ALLOW_INSECURE_LOCALHOST: ${AUTH_ALLOW_INSECURE_LOCALHOST:-true}
+      # Development-only fallback; set TOTP_ENCRYPTION_KEY for any persistent deployment.
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["bun", "run", "src/worker.ts"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ourpot:ourpot@postgres:5432/ourpot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ourpot
+      POSTGRES_PASSWORD: ourpot
+      POSTGRES_DB: ourpot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ourpot -d ourpot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ourpot · Household money</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/passkeys.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div><a class="brand" href="/">Ourpot</a><p class="subtle">Shared money planning for two</p></div>
+      <nav id="appNav" hidden aria-label="Main navigation">
+        <button type="button" id="dashboardNav">Dashboard</button>
+        <button type="button" id="settingsNav">Settings</button>
+        <button type="button" id="logoutButton">Sign out</button>
+      </nav>
+    </header>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+
+    <main>
+      <section id="authPanel" class="auth-panel">
+        <div class="intro"><h1>Plan money together.</h1><p>One place for both partners to see accounts, record activity, and make plans.</p></div>
+        <div class="card stack" id="passwordPanel">
+          <h2>Sign in</h2>
+          <form id="loginForm" class="stack">
+            <label>Email<input name="email" type="email" autocomplete="username" required></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+            <button>Sign in</button>
+          </form>
+          <button type="button" id="passkeyLoginButton" class="secondary" hidden>Sign in with a passkey</button>
+          <details><summary>Create an account</summary>
+            <form id="registerForm" class="stack inset">
+              <label>Email<input name="email" type="email" autocomplete="email" required></label>
+              <label>Password <span class="hint">(at least 12 characters)</span><input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+              <button>Create account</button>
+            </form>
+          </details>
+        </div>
+        <div class="card stack" id="mfaPanel" hidden>
+          <h2>Authenticator code</h2><p>Enter your current six-digit code or a recovery code.</p>
+          <form id="mfaForm" class="stack"><label>Code<input name="code" autocomplete="one-time-code" required></label><button>Continue</button></form>
+          <button type="button" id="mfaBackButton" class="secondary">Back to sign in</button>
+        </div>
+      </section>
+
+      <section id="setupPanel" hidden class="stack">
+        <h1>Set up your household</h1>
+        <div class="grid two">
+          <div class="card"><h2>Create a household</h2><form id="householdForm" class="stack">
+            <label>Household name<input name="name" required></label>
+            <label>Currency code<input name="currency" value="USD" maxlength="3" required></label>
+            <label>Timezone<input name="timezone" value="UTC" required></label>
+            <button>Create household</button>
+          </form></div>
+          <div class="card"><h2>Join your partner</h2><p>Use the invitation link your partner shared with you.</p><form id="acceptInviteForm" class="stack">
+            <label>Invitation token<input name="token" required></label><button>Join household</button>
+          </form></div>
+        </div>
+      </section>
+
+      <section id="dashboardPanel" hidden class="stack">
+        <div class="page-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div></div>
+        <div class="grid metrics">
+          <div class="card"><span class="label">Household income</span><strong id="income" class="metric">—</strong></div>
+          <div class="card"><span class="label">Household expenses</span><strong id="expense" class="metric">—</strong></div>
+          <div class="card"><span class="label">Entered by each partner</span><ul id="entrantTotals" class="compact-list"></ul></div>
+        </div>
+        <div class="grid two">
+          <div class="card"><h2>Accounts</h2><ul id="accountList" class="compact-list"></ul><form id="accountForm" class="stack inset">
+            <label>Name<input name="name" required></label>
+            <label>Type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="cash">Cash</option><option value="credit_card">Credit card</option><option value="loan">Loan</option></select></label>
+            <label>Opening balance (minor units)<input name="openingBalance" type="number" min="0" step="1" value="0" required></label>
+            <button>Add account</button>
+          </form></div>
+          <div class="card"><h2>Record a transaction</h2><form id="transactionForm" class="stack">
+            <label>Account<select name="accountId" id="accounts" required></select></label>
+            <label>Type<select name="type"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option></select></label>
+            <label>Destination (for transfers)<select name="destinationAccountId" id="destinationAccounts"></select></label>
+            <label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
+            <label>Description<input name="description" required></label>
+            <label>Category<input name="category" value="General"></label>
+            <button>Record transaction</button>
+          </form></div>
+        </div>
+        <div class="grid two">
+          <div class="card"><h2>Budget proposal</h2><form id="budgetForm" class="stack">
+            <label>Category<input name="category" required></label><label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
+            <label>Month<input name="period" type="month" required></label><label>Reason<input name="rationale"></label><button>Propose budget</button>
+          </form></div>
+          <div class="card"><h2>Savings goal</h2><form id="goalForm" class="stack">
+            <label>Name<input name="name" required></label><label>Target (minor units)<input name="targetAmount" type="number" min="1" step="1" required></label><button>Create goal</button>
+          </form></div>
+          <div class="card"><h2>Required task</h2><form id="taskForm" class="stack">
+            <label>Task<input name="title" required></label><label>Due date<input name="dueDate" type="date" required></label><button>Add task</button>
+          </form></div>
+          <div class="card"><h2>Subscription</h2><form id="subscriptionForm" class="stack">
+            <label>Name<input name="name" required></label><label>Price (minor units)<input name="price" type="number" min="1" step="1" required></label>
+            <label>Cadence<select name="cadence"><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label>
+            <label>Next renewal<input name="nextRenewalDate" type="date" required></label><button>Add subscription</button>
+          </form></div>
+        </div>
+        <div class="grid two">
+          <div class="card"><h2>Invite your partner</h2><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
+          <div class="card"><h2>Recent activity</h2><ul id="auditList" class="compact-list"></ul></div>
+        </div>
+      </section>
+
+      <section id="settingsPanel" hidden class="stack">
+        <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Control your sign-in methods and active sessions.</p></div></div>
+        <div class="grid two">
+          <div class="card"><h2>Active sessions</h2><p class="hint">These are your sessions only. Revocation takes effect on the next request.</p><ul id="sessionList" class="compact-list"></ul></div>
+          <div class="card"><h2>Passkeys</h2><p class="hint">Use a device PIN or biometric to sign in without a password.</p><ul id="passkeyList" class="compact-list"></ul>
+            <label>Passkey name<input id="passkeyName" value="My device" maxlength="100"></label><button type="button" id="addPasskeyButton">Add passkey</button>
+          </div>
+          <div class="card stack"><h2>Authenticator-app MFA</h2><p id="mfaStatus">Loading…</p>
+            <p class="hint">Before enabling MFA, save your recovery codes. If you lose every sign-in method, this version has no self-service account recovery.</p>
+            <button type="button" id="startMfaButton">Set up authenticator</button>
+            <div id="mfaSetup" hidden class="stack inset"><p>Add this secret to your authenticator app:</p><code id="mfaSecret" class="wrap"></code>
+              <form id="confirmMfaForm" class="stack"><label>Current six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" required></label><button>Enable MFA</button></form>
+            </div>
+            <div id="recoveryPanel" hidden><h3>Save these recovery codes now</h3><p>Each code works once. They will not appear again.</p><pre id="recoveryCodes" class="wrap"></pre></div>
+            <button type="button" id="regenerateCodesButton" class="secondary">Regenerate recovery codes</button>
+            <button type="button" id="disableMfaButton" class="danger">Disable MFA</button>
+          </div>
+          <div class="card"><h2>Confirm your identity</h2><p class="hint">Required before changing sign-in methods when your recent sign-in has expired.</p>
+            <form id="reauthForm" class="stack"><label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+              <label>Authenticator or recovery code (if MFA is on)<input name="code" autocomplete="one-time-code"></label><button>Confirm identity</button></form>
+            <button type="button" id="passkeyReauthButton" class="secondary" hidden>Confirm with passkey</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
