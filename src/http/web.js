@@ -132,8 +132,22 @@
       }
     }
     $('transactionForm').querySelector('button').disabled = !data.accounts.some((entry) => !entry.archived);
+    renderDashboardVisuals(data.report);
     renderPartnerTotals(data, memberNames);
     renderPlanning(data, memberNames);
+  }
+
+  function renderDashboardVisuals(report) {
+    const chart = $('dashboardChart'); chart.replaceChildren();
+    if (!report || (!report.household.income && !report.household.expense)) { $('dashboardChartSummary').textContent = 'No income or expenses recorded this month.'; }
+    else {
+      const max = Math.max(report.household.income, report.household.expense, 1);
+      for (const [label, value, color] of [['Income', report.household.income, '#1d5b4a'], ['Expenses', report.household.expense, '#a43e45']]) {
+        const row = document.createElement('div'); row.className = 'chart-row'; const name = document.createElement('span'); name.textContent = label; const track = document.createElement('span'); track.className = 'chart-track'; const bar = document.createElement('span'); bar.className = 'chart-bar'; bar.style.inlineSize = (value / max * 100) + '%'; bar.style.backgroundColor = color; track.append(bar); const amount = document.createElement('strong'); amount.textContent = value + ' minor units'; row.append(name, track, amount); chart.append(row);
+      }
+      $('dashboardChartSummary').textContent = 'Net change: ' + report.household.net + ' minor units.';
+    }
+    const categories = $('dashboardCategoryList'); categories.replaceChildren(); const entries = Object.entries(report?.byCategory || {}); if (!entries.length) item(categories, 'No expenses by category yet.'); for (const [category, amount] of entries) item(categories, category + ' · ' + amount + ' minor units');
   }
 
   function renderPartnerTotals(data, memberNames) {

@@ -260,7 +260,10 @@ export class ApiApp {
   private async dashboard(context: HouseholdContext): Promise<Response> {
     const members = await this.households.listMembers(context);
     const reminders = this.tasksSubscriptions.generateReminders(context, new Date());
+    const today = new Date().toISOString().slice(0, 10);
+    const monthStart = today.slice(0, 8) + '01';
     return json({
+      report: buildHouseholdReport(this.ledger, context, { from: monthStart, to: today }),
       accounts: this.ledger.listAccounts(context),
       totals: this.ledger.getTotals(context),
       audits: this.ledger.getAuditEvents(context),
