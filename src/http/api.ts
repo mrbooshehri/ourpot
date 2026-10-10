@@ -4,6 +4,7 @@ import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
 import { PlanningService } from '../modules/planning/service';
 import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
+import { RulesService } from '../modules/rules';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
@@ -20,10 +21,12 @@ export class ApiApp {
   readonly ledger = new LedgerService();
   readonly planning = new PlanningService();
   readonly tasksSubscriptions = new TaskSubscriptionService();
+  readonly rules: RulesService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
     this.households = new PostgresHouseholdService(db);
     this.identity = new IdentityService(db, config);
+    this.rules = new RulesService(db);
   }
 
   async fetch(request: Request, clientIp = ''): Promise<Response> {
@@ -208,6 +211,8 @@ export class ApiApp {
         const body = await request.json() as Record<string, unknown>;
         return json(await this.households.inviteMember(context, String(body.email ?? '')), 201);
       }
+      if (request.method === 'GET' && url.pathname === '/api/rules') return json(await this.rules.get(context));
+      if (request.method === 'PUT' && url.pathname === '/api/rules') return json(await this.rules.update(context, await request.json()));
       if (request.method === 'GET' && url.pathname === '/api/reports') {
         return json(buildHouseholdReport(this.ledger, context, { from: url.searchParams.get('from') ?? '', to: url.searchParams.get('to') ?? '' }));
       }

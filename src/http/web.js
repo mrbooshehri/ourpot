@@ -179,6 +179,17 @@
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
 
+  async function rules() {
+    show('rulesPanel');
+    const data = await api('/api/rules');
+    const form = $('rulesForm');
+    form.elements.subscriptionReminders.checked = data.subscriptionReminders;
+    form.elements.taskDueReminders.checked = data.taskDueReminders;
+    form.elements.notifyBothPartners.checked = data.notifyBothPartners;
+    form.elements.budgetWarningPercent.value = data.budgetWarningPercent ?? '';
+    $('rulesStatus').textContent = 'Saved household defaults.';
+  }
+
   async function reports() {
     show('reportsPanel');
     const form = $('reportForm');
@@ -251,6 +262,7 @@
   }
 
   bindForm('reportForm', async (values) => { await loadReport(values.from, values.to); });
+  bindForm('rulesForm', async (values) => { await api('/api/rules', 'PUT', { subscriptionReminders: values.subscriptionReminders === 'on', taskDueReminders: values.taskDueReminders === 'on', notifyBothPartners: values.notifyBothPartners === 'on', budgetWarningPercent: values.budgetWarningPercent ? Number(values.budgetWarningPercent) : null }); await rules(); status('Rules saved.', true); });
   bindForm('loginForm', passwordLogin);
   bindForm('inviteSignupForm', async (values) => {
     await api('/api/invitations/signup', 'POST', values);
@@ -293,7 +305,7 @@
   $('profileNav').addEventListener('click', () => perform(profile));
   $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
   $('settingsNav').addEventListener('click', () => perform(settings));
-  $('rulesNav').addEventListener('click', () => perform(async () => { show('rulesPanel'); }));
+  $('rulesNav').addEventListener('click', () => perform(rules));
   $('logoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   $('passwordChangeLogoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   bindForm('passwordChangeForm', async (values) => { await api('/api/auth/change-password', 'POST', values); await checkAuth(); status('Password changed.', true); });

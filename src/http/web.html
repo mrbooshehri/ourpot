@@ -199,8 +199,8 @@
       </section>
 
       <section id="rulesPanel" data-page="rules" hidden class="stack">
-        <div class="page-heading"><div><h1>Rules</h1><p class="subtle">Choose which household reminders and notifications you receive.</p></div></div>
-        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><p>Notification rules will appear here.</p></div>
+        <div class="page-heading"><div><h1>Rules</h1><p class="subtle">Choose which shared reminders and notifications are enabled.</p></div></div>
+        <form id="rulesForm" class="card stack"><label><span>Subscription renewal reminders</span><input name="subscriptionReminders" type="checkbox" checked></label><label><span>Task due reminders</span><input name="taskDueReminders" type="checkbox" checked></label><label><span>Send household reminders to both partners</span><input name="notifyBothPartners" type="checkbox" checked></label><label>Budget warning threshold (%)<input name="budgetWarningPercent" type="number" min="1" max="100" step="1" placeholder="Off"></label><button>Save rules</button><p id="rulesStatus" class="hint"></p></form>
       </section>
     </main>
   </div>
