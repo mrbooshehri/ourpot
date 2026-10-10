@@ -15,7 +15,7 @@
   }
 
   function show(panel) {
-    for (const id of ['authPanel', 'passwordChangePanel', 'setupPanel', 'dashboardPanel', 'settingsPanel', 'adminPanel']) $(id).hidden = id !== panel;
+    for (const id of ['authPanel', 'passwordChangePanel', 'setupPanel', 'dashboardPanel', 'reportsPanel', 'profilePanel', 'settingsPanel', 'rulesPanel', 'adminPanel']) $(id).hidden = id !== panel;
     $('appNav').hidden = panel === 'authPanel';
   }
 
@@ -254,8 +254,11 @@
   ]) bindForm(id, async (values) => { await api(path, 'POST', values); await dashboard(); status(success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
+  $('reportsNav').addEventListener('click', () => perform(async () => { show('reportsPanel'); }));
+  $('profileNav').addEventListener('click', () => perform(async () => { show('profilePanel'); }));
   $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
   $('settingsNav').addEventListener('click', () => perform(settings));
+  $('rulesNav').addEventListener('click', () => perform(async () => { show('rulesPanel'); }));
   $('logoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   $('passwordChangeLogoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   bindForm('passwordChangeForm', async (values) => { await api('/api/auth/change-password', 'POST', values); await checkAuth(); status('Password changed.', true); });

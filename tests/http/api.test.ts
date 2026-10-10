@@ -24,6 +24,10 @@ describe('HTTP API', () => {
     expect(html).toContain('Partner activity');
     expect(html).toContain('Transfers are excluded from income and expenses');
     expect(html).toContain('totalsHelp');
+    for (const page of ['dashboard', 'reports', 'profile', 'settings', 'rules']) expect(html).toContain(`data-page="${page}"`);
+    expect(html).toContain('tabler-icon');
+    expect(html).toContain('aria-label="Reports"');
+    expect(html).not.toContain('cdn.jsdelivr.net');
     expect(html).not.toContain('/api/demo/setup');
     expect(html).not.toContain('x-user-id');
   });

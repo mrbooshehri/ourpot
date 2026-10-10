@@ -13,9 +13,12 @@
     <header class="topbar">
       <div><a class="brand" href="/">Ourpot</a><p class="subtle">Shared money planning for two</p></div>
       <nav id="appNav" hidden aria-label="Main navigation">
-        <button type="button" id="dashboardNav">Dashboard</button>
-        <button type="button" id="adminNav" hidden>Administration</button>
-        <button type="button" id="settingsNav">Settings</button>
+        <button type="button" class="nav-item" data-page="dashboard" id="dashboardNav"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"/><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"/><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"/><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"/></svg><span>Dashboard</span></button>
+        <button type="button" class="nav-item" data-page="reports" id="reportsNav"><svg class="tabler-icon" role="img" aria-label="Reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-14"/><path d="M4 20h14"/></svg><span>Reports</span></button>
+        <button type="button" class="nav-item" data-page="profile" id="profileNav"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"/></svg><span>Profile</span></button>
+        <button type="button" class="nav-item" data-page="settings" id="settingsNav"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-.94 1.543 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37a1.724 1.724 0 0 0 2.572 -1.065"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg><span>Settings</span></button>
+        <button type="button" class="nav-item" data-page="rules" id="rulesNav"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Rules</span></button>
+        <button type="button" class="nav-item" data-page="admin" id="adminNav" hidden><span>Administration</span></button>
         <button type="button" id="logoutButton">Sign out</button>
       </nav>
     </header>
@@ -79,7 +82,7 @@
         </div>
       </section>
 
-      <section id="adminPanel" hidden class="stack">
+      <section id="adminPanel" data-page="admin" hidden class="stack">
         <div class="page-heading"><div><h1>Administration</h1><p class="subtle">Create accounts for household members and share their temporary credentials securely.</p></div></div>
         <div class="grid two">
           <div class="card"><h2>Create user</h2><form id="adminUserForm" class="stack"><label>Display name<input name="displayName" required></label><label>Email<input name="email" type="email" required></label><label>Temporary password<input name="temporaryPassword" type="password" minlength="12" required></label><button>Create user</button></form><p id="adminUserResult" class="hint"></p></div>
@@ -87,7 +90,7 @@
         </div>
       </section>
 
-      <section id="dashboardPanel" hidden class="stack">
+      <section id="dashboardPanel" data-page="dashboard" hidden class="stack">
         <div class="page-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div></div>
         <section class="card overview" aria-labelledby="combined-household-heading">
           <div class="page-heading"><div><h2 id="combined-household-heading">Combined household</h2><p class="subtle">Both partners together</p></div></div>
@@ -150,7 +153,7 @@
         </div>
       </section>
 
-      <section id="settingsPanel" hidden class="stack">
+      <section id="settingsPanel" data-page="settings" hidden class="stack">
         <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Control your sign-in methods and active sessions.</p></div></div>
         <div class="grid two">
           <div class="card"><h2>Language</h2><p class="hint">Choose the layout direction for this account.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
@@ -176,6 +179,21 @@
             <button type="button" id="passkeyReauthButton" class="secondary" hidden>Confirm with passkey</button>
           </div>
         </div>
+      </section>
+
+      <section id="reportsPanel" data-page="reports" hidden class="stack">
+        <div class="page-heading"><div><h1>Reports</h1><p class="subtle">Review household money over a selected time range.</p></div></div>
+        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-14"/><path d="M4 20h14"/></svg><p>Choose a date range to see income, expenses, transfers, and category trends.</p></div>
+      </section>
+
+      <section id="profilePanel" data-page="profile" hidden class="stack">
+        <div class="page-heading"><div><h1>Profile</h1><p class="subtle">Manage your name and sign-in details.</p></div></div>
+        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"/></svg><p>Your profile and security controls will appear here.</p></div>
+      </section>
+
+      <section id="rulesPanel" data-page="rules" hidden class="stack">
+        <div class="page-heading"><div><h1>Rules</h1><p class="subtle">Choose which household reminders and notifications you receive.</p></div></div>
+        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 0 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><p>Notification rules will appear here.</p></div>
       </section>
     </main>
   </div>
