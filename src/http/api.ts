@@ -1,10 +1,12 @@
-import { buildHouseholdReport } from '../modules/reports/service';
+import { buildReportFromData } from '../modules/reports/service';
 import { PostgresHouseholdService } from '../modules/households/postgres-service';
 import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
 import { PostgresTransactionService } from '../modules/transactions/postgres-service';
 import { PlanningService } from '../modules/planning/service';
+import { PostgresPlanningService } from '../modules/planning/postgres-service';
 import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
+import { PostgresTaskSubscriptionService } from '../modules/tasks/postgres-service';
 import { RulesService } from '../modules/rules';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
@@ -23,6 +25,8 @@ export class ApiApp {
   readonly postgresLedger: PostgresTransactionService;
   readonly planning = new PlanningService();
   readonly tasksSubscriptions = new TaskSubscriptionService();
+  readonly postgresPlanning: PostgresPlanningService;
+  readonly postgresTasks: PostgresTaskSubscriptionService;
   readonly rules: RulesService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
@@ -30,6 +34,8 @@ export class ApiApp {
     this.identity = new IdentityService(db, config);
     this.rules = new RulesService(db);
     this.postgresLedger = new PostgresTransactionService(db);
+    this.postgresPlanning = new PostgresPlanningService(db);
+    this.postgresTasks = new PostgresTaskSubscriptionService(db);
   }
 
   async fetch(request: Request, clientIp = ''): Promise<Response> {
@@ -217,7 +223,8 @@ export class ApiApp {
       if (request.method === 'GET' && url.pathname === '/api/rules') return json(await this.rules.get(context));
       if (request.method === 'PUT' && url.pathname === '/api/rules') return json(await this.rules.update(context, await request.json()));
       if (request.method === 'GET' && url.pathname === '/api/reports') {
-        return json(buildHouseholdReport(this.ledger, context, { from: url.searchParams.get('from') ?? '', to: url.searchParams.get('to') ?? '' }));
+        const financial = await this.postgresLedger.getDashboard(context);
+        return json(buildReportFromData(await this.postgresLedger.listTransactions(context), financial.accounts, { from: url.searchParams.get('from') ?? '', to: url.searchParams.get('to') ?? '' }));
       }
       if (request.method === 'GET' && url.pathname === '/api/dashboard') return this.dashboard(context);
       if (request.method === 'POST' && url.pathname === '/api/accounts') return this.createAccount(context, await request.json());
@@ -235,7 +242,7 @@ export class ApiApp {
       if (request.method === 'POST' && url.pathname === '/api/tasks') return this.createTask(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/tasks/complete') return this.completeTask(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/subscriptions') return this.createSubscription(context, await request.json());
-      if (request.method === 'POST' && url.pathname === '/api/reminders') return json({ reminders: this.tasksSubscriptions.generateReminders(context, new Date()) });
+      if (request.method === 'POST' && url.pathname === '/api/reminders') return json({ reminders: await this.postgresTasks.generateReminders(context, new Date()) });
       return json({ error: 'Not found' }, 404);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Request failed';
@@ -267,21 +274,24 @@ export class ApiApp {
 
   private async dashboard(context: HouseholdContext): Promise<Response> {
     const members = await this.households.listMembers(context);
-    const reminders = this.tasksSubscriptions.generateReminders(context, new Date());
     const today = new Date().toISOString().slice(0, 10);
     const monthStart = today.slice(0, 8) + '01';
     const financial = await this.postgresLedger.getDashboard(context);
+    const planning = await this.postgresPlanning.listDashboard(context);
+    const tasks = await this.postgresTasks.listTasks(context);
+    const subscriptions = await this.postgresTasks.listSubscriptions(context);
+    const reminders = await this.postgresTasks.generateReminders(context, new Date());
     return json({
-      report: buildHouseholdReport(this.ledger, context, { from: monthStart, to: today }),
+      report: buildReportFromData(await this.postgresLedger.listTransactions(context), financial.accounts, { from: monthStart, to: today }),
       accounts: financial.accounts,
       totals: financial.totals,
       audits: financial.audits,
       members,
-      budgets: this.planning.listBudgets(context),
-      goals: this.planning.listGoals(context),
-      wishes: this.planning.listWishes(context),
-      tasks: this.tasksSubscriptions.listTasks(context),
-      subscriptions: this.tasksSubscriptions.listSubscriptions(context),
+      budgets: planning.budgets,
+      goals: planning.goals,
+      wishes: planning.wishes,
+      tasks,
+      subscriptions,
       reminders,
     });
   }
@@ -300,38 +310,35 @@ export class ApiApp {
     return json({ error: 'Unsupported transaction type' }, 400);
   }
 
-  private proposeBudget(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.planning.proposeBudget(context, String(body.category), Number(body.amount), String(body.period), String(body.rationale ?? '')));
+  private async proposeBudget(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresPlanning.proposeBudget(context, { category: String(body.category ?? ''), amount: Number(body.amount ?? 0), period: String(body.period ?? ''), rationale: String(body.rationale ?? '') }));
   }
 
-  private discussBudget(context: HouseholdContext, body: Record<string, unknown>): Response {
-    this.planning.markDiscussed(context, String(body.budgetId));
-    return json(this.planning.getBudget(String(body.budgetId)));
+  private async discussBudget(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresPlanning.discussBudget(context, String(body.budgetId)));
   }
 
-  private agreeBudget(context: HouseholdContext, body: Record<string, unknown>): Response {
-    this.planning.agreeBudget(context, String(body.budgetId));
-    return json(this.planning.getBudget(String(body.budgetId)));
+  private async agreeBudget(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresPlanning.agreeBudget(context, String(body.budgetId)));
   }
 
-  private createGoal(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.planning.createGoal(context, String(body.name), Number(body.targetAmount)));
+  private async createGoal(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresPlanning.createGoal(context, { name: String(body.name ?? ''), targetAmount: Number(body.targetAmount ?? 0) }));
   }
 
-  private addContribution(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.planning.addContribution(context, String(body.goalId), Number(body.amount), String(body.note ?? '')));
+  private async addContribution(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresPlanning.addContribution(context, String(body.goalId), { amount: Number(body.amount ?? 0), note: String(body.note ?? '') }));
   }
 
-  private createTask(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.tasksSubscriptions.createTask(context, String(body.title), String(body.assigneeId ?? context.userId), String(body.dueDate)));
+  private async createTask(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresTasks.createTask(context, { title: String(body.title ?? ''), assigneeId: String(body.assigneeId ?? context.userId), dueDate: String(body.dueDate ?? '') }));
   }
 
-  private completeTask(context: HouseholdContext, body: Record<string, unknown>): Response {
-    this.tasksSubscriptions.completeTask(context, String(body.taskId));
-    return json(this.tasksSubscriptions.getTask(String(body.taskId)));
+  private async completeTask(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresTasks.completeTask(context, String(body.taskId)));
   }
 
-  private createSubscription(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.tasksSubscriptions.createSubscription(context, String(body.name), Number(body.price), body.cadence as 'monthly', String(body.nextRenewalDate)));
+  private async createSubscription(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresTasks.createSubscription(context, { name: String(body.name ?? ''), price: Number(body.price ?? 0), cadence: body.cadence as 'monthly' | 'yearly', nextRenewalDate: String(body.nextRenewalDate ?? '') }));
   }
 }

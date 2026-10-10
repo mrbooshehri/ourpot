@@ -75,6 +75,11 @@ export class PostgresTransactionService {
     await this.db.transaction(async (tx) => { const old = await this.transaction(tx, context, id, true); if (!old) throw new Error('Transaction not found'); if (old.deleted) return; await tx.query('UPDATE transactions SET deleted_at = now(), updated_at = now() WHERE id = $1 AND household_id = $2', [id, context.householdId]); await this.audit(tx, context, 'transaction', id, 'deleted', old, { ...old, deleted: true }); });
   }
 
+  async listTransactions(context: HouseholdContext) {
+    const result = await this.db.query<TransactionRow>(`SELECT t.id, t.household_id, t.account_id, t.amount_minor, t.type, t.description, c.name AS category, t.entered_by, t.transaction_date::text, t.deleted_at FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.household_id=$1 ORDER BY t.transaction_date, t.created_at`, [context.householdId]);
+    return result.rows.map(transactionView);
+  }
+
   async getDashboard(context: HouseholdContext): Promise<DashboardLedgerView> {
     const accounts = await this.db.query<AccountRow>(`SELECT a.id, a.household_id, a.name, a.type, a.opening_balance, a.archived, a.opening_balance + COALESCE(SUM(CASE WHEN t.deleted_at IS NULL AND t.type IN ('income','adjustment') THEN t.amount_minor WHEN t.deleted_at IS NULL AND t.type = 'expense' THEN -t.amount_minor WHEN t.deleted_at IS NULL AND t.type = 'transfer' AND t.id LIKE '%:destination' THEN t.amount_minor WHEN t.deleted_at IS NULL AND t.type = 'transfer' THEN -t.amount_minor ELSE 0 END),0) AS balance FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id AND t.household_id = $1 WHERE a.household_id = $1 GROUP BY a.id ORDER BY a.created_at`, [context.householdId]);
     const totals = await this.db.query<{ household_income:number; household_expense:number }>(`SELECT COALESCE(SUM(amount_minor) FILTER (WHERE type='income'),0) AS household_income, COALESCE(SUM(amount_minor) FILTER (WHERE type='expense'),0) AS household_expense FROM transactions WHERE household_id=$1 AND deleted_at IS NULL`, [context.householdId]);

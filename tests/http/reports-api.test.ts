@@ -10,6 +10,9 @@ it('returns a household-scoped report for an inclusive date range', async()=>{
  const db=createDatabaseClient(); const app=new ApiApp(db,config); const email=`report-${randomUUID()}@example.com`; await new IdentityService(db,config).register(email,'correct horse battery staple');
  const login=await app.fetch(post('/api/auth/login',{email,password:'correct horse battery staple'})); const cookie=login.headers.get('set-cookie')?.split(';')[0] ?? '';
  await app.fetch(post('/api/households',{name:'Home',currency:'USD',timezone:'UTC'},cookie));
- const response=await app.fetch(new Request(origin+'/api/reports?from=2026-01-01&to=2026-01-31',{headers:{cookie}})); expect(response.status).toBe(200); expect(await response.json()).toMatchObject({range:{from:'2026-01-01',to:'2026-01-31'},household:{income:0,expense:0,net:0}});
+ const accountResponse = await app.fetch(post('/api/accounts',{name:'Checking',type:'checking',openingBalance:100},cookie));
+ const account = await accountResponse.json() as { id: string };
+ await app.fetch(post('/api/transactions',{type:'income',accountId:account.id,amount:500,description:'Salary',category:'Work',transactionDate:'2026-01-31'},cookie));
+ const response=await app.fetch(new Request(origin+'/api/reports?from=2026-01-01&to=2026-01-31',{headers:{cookie}})); expect(response.status).toBe(200); expect(await response.json()).toMatchObject({range:{from:'2026-01-01',to:'2026-01-31'},household:{income:500,expense:0,net:500}});
  const invalid=await app.fetch(new Request(origin+'/api/reports?from=bad&to=2026-01-31',{headers:{cookie}})); expect(invalid.status).toBe(400);
 });

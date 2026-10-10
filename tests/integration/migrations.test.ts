@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { DatabaseClient, SqlResult, SqlValue } from '../../src/db/client';
-import { MigrationRunner, type Migration } from '../../src/db/migrations';
+import { MigrationRunner, loadMigrationFiles, type Migration } from '../../src/db/migrations';
 
 class MigrationDb implements DatabaseClient {
   readonly calls: string[] = [];
@@ -15,6 +15,12 @@ class MigrationDb implements DatabaseClient {
 }
 
 describe('migration runner', () => {
+  it('discovers migration files from the runtime directory', () => {
+    const files = loadMigrationFiles('migrations', '0008');
+    expect(files.map((file) => file.id)).toContain('0009_financial_runtime');
+    expect(files.map((file) => file.id)).toContain('0010_planning_runtime');
+    expect(files.every((file) => file.sql.length > 0)).toBe(true);
+  });
   it('applies migrations in filename order and skips applied migrations', async () => {
     const db = new MigrationDb();
     const migrations: Migration[] = [
