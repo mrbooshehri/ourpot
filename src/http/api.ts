@@ -2,6 +2,7 @@ import { buildHouseholdReport } from '../modules/reports/service';
 import { PostgresHouseholdService } from '../modules/households/postgres-service';
 import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
+import { PostgresTransactionService } from '../modules/transactions/postgres-service';
 import { PlanningService } from '../modules/planning/service';
 import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
 import { RulesService } from '../modules/rules';
@@ -19,6 +20,7 @@ export class ApiApp {
   readonly households: PostgresHouseholdService;
   readonly identity: IdentityService;
   readonly ledger = new LedgerService();
+  readonly postgresLedger: PostgresTransactionService;
   readonly planning = new PlanningService();
   readonly tasksSubscriptions = new TaskSubscriptionService();
   readonly rules: RulesService;
@@ -27,6 +29,7 @@ export class ApiApp {
     this.households = new PostgresHouseholdService(db);
     this.identity = new IdentityService(db, config);
     this.rules = new RulesService(db);
+    this.postgresLedger = new PostgresTransactionService(db);
   }
 
   async fetch(request: Request, clientIp = ''): Promise<Response> {
@@ -219,6 +222,11 @@ export class ApiApp {
       if (request.method === 'GET' && url.pathname === '/api/dashboard') return this.dashboard(context);
       if (request.method === 'POST' && url.pathname === '/api/accounts') return this.createAccount(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/transactions') return this.createTransaction(context, await request.json());
+      if (url.pathname.startsWith('/api/transactions/')) {
+        const transactionId = decodeURIComponent(url.pathname.slice('/api/transactions/'.length));
+        if (request.method === 'PATCH') return json(await this.postgresLedger.updateTransaction(context, transactionId, await request.json()));
+        if (request.method === 'DELETE') { await this.postgresLedger.deleteTransaction(context, transactionId); return json({ ok: true }); }
+      }
       if (request.method === 'POST' && url.pathname === '/api/budgets') return this.proposeBudget(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/budgets/discuss') return this.discussBudget(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/budgets/agree') return this.agreeBudget(context, await request.json());
@@ -262,11 +270,12 @@ export class ApiApp {
     const reminders = this.tasksSubscriptions.generateReminders(context, new Date());
     const today = new Date().toISOString().slice(0, 10);
     const monthStart = today.slice(0, 8) + '01';
+    const financial = await this.postgresLedger.getDashboard(context);
     return json({
       report: buildHouseholdReport(this.ledger, context, { from: monthStart, to: today }),
-      accounts: this.ledger.listAccounts(context),
-      totals: this.ledger.getTotals(context),
-      audits: this.ledger.getAuditEvents(context),
+      accounts: financial.accounts,
+      totals: financial.totals,
+      audits: financial.audits,
       members,
       budgets: this.planning.listBudgets(context),
       goals: this.planning.listGoals(context),
@@ -277,19 +286,18 @@ export class ApiApp {
     });
   }
 
-  private createAccount(context: HouseholdContext, body: Record<string, unknown>): Response {
-    return json(this.ledger.createAccount(context, String(body.name ?? ''), body.type as 'checking', Number(body.openingBalance ?? 0)));
+  private async createAccount(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
+    return json(await this.postgresLedger.createAccount(context, { name: String(body.name ?? ''), type: body.type as 'checking', openingBalance: Number(body.openingBalance ?? 0) }));
   }
 
-  private createTransaction(context: HouseholdContext, body: Record<string, unknown>): Response {
+  private async createTransaction(context: HouseholdContext, body: Record<string, unknown>): Promise<Response> {
     const type = String(body.type ?? 'expense');
-    if (type === 'transfer') {
-      return json(this.ledger.createTransfer(context, String(body.sourceAccountId), String(body.destinationAccountId), Number(body.amount), String(body.description ?? 'Transfer')));
-    }
-    const args = [context, String(body.accountId), Number(body.amount), String(body.description ?? ''), String(body.category ?? '')] as const;
-    if (type === 'income') return json(this.ledger.createIncome(...args));
-    if (type === 'adjustment') return json(this.ledger.createAdjustment(context, args[1], args[2], args[3]));
-    return json(this.ledger.createExpense(...args));
+    const transactionDate = String(body.transactionDate ?? new Date().toISOString().slice(0, 10));
+    if (type === 'transfer') return json(await this.postgresLedger.createTransfer(context, { sourceAccountId: String(body.sourceAccountId), destinationAccountId: String(body.destinationAccountId), amount: Number(body.amount), description: String(body.description ?? 'Transfer'), transactionDate }));
+    const input = { accountId: String(body.accountId), amount: Number(body.amount), description: String(body.description ?? ''), category: String(body.category ?? ''), transactionDate };
+    if (type === 'income') return json(await this.postgresLedger.createIncome(context, input));
+    if (type === 'expense') return json(await this.postgresLedger.createExpense(context, input));
+    return json({ error: 'Unsupported transaction type' }, 400);
   }
 
   private proposeBudget(context: HouseholdContext, body: Record<string, unknown>): Response {
