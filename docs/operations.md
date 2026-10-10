@@ -28,7 +28,7 @@ Before first startup, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
 
 ## PostgreSQL
 
-For a new Compose volume, PostgreSQL applies `0001_initial.sql` through `0006_user_profile_preferences.sql` automatically. For an existing volume, apply new migrations explicitly:
+For a new Compose volume, PostgreSQL applies `0001_initial.sql` through `0007_notification_rules.sql` automatically. For an existing volume, apply new migrations explicitly:
 
 ```bash
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0002_authentication.sql
@@ -36,6 +36,7 @@ docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-i
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0004_admin_onboarding.sql
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0005_unique_account_names.sql
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0006_user_profile_preferences.sql
+docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0007_notification_rules.sql
 ```
 
 Set `DATABASE_URL`, `PUBLIC_ORIGIN`, `WEBAUTHN_RP_ID`, and a random 32-byte hex `TOTP_ENCRYPTION_KEY` for deployments. HTTP localhost mode is enabled only by the explicit development setting in Compose.
@@ -48,7 +49,7 @@ Required production checks before release:
 4. Exercise account, transaction, transfer, budget, goal, task, subscription, and reminder flows after financial persistence is complete.
 5. Configure secrets, backups, restore testing, health checks, structured logs, and a rollback procedure.
 
-The current financial services remain in-memory behind the authenticated API. Do not treat that part as production persistence until its PostgreSQL repositories and migration are implemented.
+The current financial domain service remains in-memory behind the authenticated API; the PostgreSQL repository layer is present for persistence work but is not yet the runtime ledger used by the web API. Do not treat financial records as production durable until that wiring is completed.
 
 ## Verification limits in this workspace
 

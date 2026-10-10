@@ -59,6 +59,10 @@ These decisions are intentionally limited to behavior required to implement the 
 
 ## 4. MVP features
 
+### 4.0 Responsive application surface
+
+The authenticated web app provides five shared navigation areas: Dashboard, Reports, Profile, Settings, and Rules. Dashboard includes household and per-partner totals, account balances, planning items, audit activity, and lightweight monthly/category visual summaries. Reports accepts inclusive date-only ranges and shows household totals, category expenses, and monthly activity. Profile contains display name, password, MFA, passkeys, and active sessions. Settings contains language and household preferences. Rules contains in-app reminder and budget-warning preferences. The interface is mobile-friendly, uses local Tabler outline SVG assets, and switches to RTL only for Persian or Arabic.
+
 ### 4.1 Accounts
 
 Members can create, edit, archive, and view accounts such as checking, savings, cash, credit card, or loan.

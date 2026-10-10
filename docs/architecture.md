@@ -30,6 +30,7 @@ Modules:
 - **Tasks:** one-time required financial tasks, assignees, due dates, completion.
 - **Subscriptions and reminders:** monthly/yearly subscriptions, renewal dates, idempotent in-app reminders.
 - **Reporting:** household-scoped read queries for balances, member-entered totals, category spend, and budget status.
+- **Notification rules:** household-scoped renewal, task, budget-threshold, and recipient preferences stored in `notification_rules` and audited.
 - **Audit:** immutable financial mutation events and household-scoped readers.
 
 ## 3. Request and authorization flow
@@ -79,6 +80,7 @@ Core tables:
 - `subscriptions`
 - `reminders`
 - `audit_events`
+- `notification_rules`
 
 Constraints and indexes:
 
@@ -90,6 +92,7 @@ Constraints and indexes:
 - Rows carry household ID where practical for efficient authorization and indexing.
 - Index `(household_id, transaction_date)`, `(household_id, renewal_date)`, and membership/session lookup keys.
 - Reminder uniqueness covers subscription, renewal date, lead time, and recipient.
+- `notification_rules.household_id` is unique; budget warning thresholds are constrained to 1–100 or null.
 
 Timestamps are UTC. Calendar periods, due dates, and reminder windows use the household timezone.
 
@@ -117,7 +120,7 @@ A scheduled worker generates in-app renewal reminders. Generation is idempotent,
 
 ## 8. API and application boundaries
 
-Commands mutate state: create account, create transaction, create transfer, propose/discuss/agree budget, contribute to goal, complete task, and confirm renewal. Queries return household-scoped views: dashboard totals, transaction lists, balances, budget status, goals, tasks, subscriptions, reminders, and audit history.
+Commands mutate state: create account, create transaction, create transfer, propose/discuss/agree budget, contribute to goal, complete task, update notification rules, and confirm renewal. Queries return household-scoped views: dashboard totals and visual summaries, inclusive date-range reports, transaction lists, balances, budget status, goals, tasks, subscriptions, reminders, and audit history. The web shell uses locally bundled Tabler outline SVGs and native CSS logical properties; English is LTR and Persian/Arabic are RTL.
 
 Service methods accept an authenticated `HouseholdContext` and typed input. They return domain/application errors that the transport layer maps to stable responses. Transport code does not implement accounting rules or authorization decisions.
 

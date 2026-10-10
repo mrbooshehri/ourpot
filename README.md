@@ -4,7 +4,7 @@ A shared household money planning app for two partners. Both partners can view h
 
 ## Project status
 
-**Implementation in progress. Password sessions, optional authenticator MFA, passkeys, household membership checks, a responsive security Settings page, account-name uniqueness, opening-balance reporting, language direction settings, household planning lists, and focused PostgreSQL tests are present. Financial domain modules still need their approved PostgreSQL persistence work before the complete money MVP is release-ready.**
+**Implementation in progress. Password sessions, optional authenticator MFA, passkeys, household membership checks, responsive Dashboard, Reports, Profile, Settings, and Rules pages, report calculations, notification-rule persistence, account-name uniqueness, opening-balance reporting, language direction settings, and focused PostgreSQL tests are present. Financial domain modules still need their approved PostgreSQL persistence wiring before the complete money MVP is release-ready.**
 
 The MVP decisions required for implementation are resolved in [docs/product-spec.md](docs/product-spec.md). Product extensions and infrastructure choices that are not needed for the first release remain explicitly deferred.
 
@@ -19,6 +19,7 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 - [Operations](docs/operations.md) — local run, Docker/PostgreSQL setup, migrations, and remaining release validation.
 - [Authentication design](docs/superpowers/specs/2026-10-08-authentication-design.md) — approved behavior for password and passkey sign-in, optional MFA, and active-session management.
 - [Authentication implementation plan](docs/superpowers/plans/2026-10-08-authentication.md) — incremental tests, persistence, API, MFA, passkeys, Settings, and deployment verification.
+- [UI redesign plan](docs/superpowers/plans/2026-10-10-ui-ux-redesign.md) — responsive page navigation, local Tabler icons, reports, rules, and dashboard visualizations.
 - [Admin onboarding plan](docs/superpowers/plans/2026-10-08-admin-controlled-onboarding.md) — bootstrap root administration, forced password changes, and controlled user creation.
 
 ## Proposed small MVP
@@ -37,6 +38,6 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 
 The detailed plan is in [docs/superpowers/plans/2026-10-06-household-money-mvp.md](docs/superpowers/plans/2026-10-06-household-money-mvp.md). It covers foundation, identity and access, the financial ledger, planning features, tasks and reminders, the responsive web surface, and release verification.
 
-The MVP plan and authentication plan are approved. Work is continuing in small verified steps; Git history remains untouched because the repository's `.git` metadata is empty.
+The MVP, authentication, and UI redesign plans are approved. Work is continuing in small verified steps. The repository has usable Git metadata; no history repair is required.
 
 Account names are unique within a household (case-insensitive, after trimming). Opening balances contribute to account balances; household income reports only income transactions.
