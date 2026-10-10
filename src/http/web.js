@@ -179,6 +179,33 @@
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
 
+  async function reports() {
+    show('reportsPanel');
+    const form = $('reportForm');
+    const today = new Date();
+    const end = today.toISOString().slice(0, 10);
+    const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    if (!form.elements.from.value) form.elements.from.value = start;
+    if (!form.elements.to.value) form.elements.to.value = end;
+    await loadReport(form.elements.from.value, form.elements.to.value);
+  }
+  async function loadReport(from, to) {
+    $('reportStatus').textContent = 'Loading report…';
+    const data = await api('/api/reports?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
+    $('reportSummary').hidden = false;
+    $('reportIncome').textContent = data.household.income + ' minor units';
+    $('reportExpense').textContent = data.household.expense + ' minor units';
+    $('reportNet').textContent = data.household.net + ' minor units';
+    const categories = $('reportCategories'); categories.replaceChildren();
+    const categoryEntries = Object.entries(data.byCategory);
+    if (!categoryEntries.length) item(categories, 'No expenses in this range.');
+    for (const [category, amount] of categoryEntries) item(categories, category + ' · ' + amount + ' minor units');
+    const monthly = $('reportMonthly'); monthly.replaceChildren();
+    if (!data.monthly.length) item(monthly, 'No income or expenses in this range.');
+    for (const row of data.monthly) item(monthly, row.month + ' · income ' + row.income + ' · expenses ' + row.expense + ' · net ' + row.net);
+    $('reportStatus').textContent = 'Showing ' + data.range.from + ' through ' + data.range.to + '.';
+  }
+
   async function profile() {
     show('profilePanel');
     const [profileData, sessionsData, mfa, passkeysData] = await Promise.all([
@@ -223,6 +250,7 @@
     $('languageForm').elements.language.value = languageData.language;
   }
 
+  bindForm('reportForm', async (values) => { await loadReport(values.from, values.to); });
   bindForm('loginForm', passwordLogin);
   bindForm('inviteSignupForm', async (values) => {
     await api('/api/invitations/signup', 'POST', values);
@@ -261,7 +289,7 @@
   ]) bindForm(id, async (values) => { await api(path, 'POST', values); await dashboard(); status(success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
-  $('reportsNav').addEventListener('click', () => perform(async () => { show('reportsPanel'); }));
+  $('reportsNav').addEventListener('click', () => perform(reports));
   $('profileNav').addEventListener('click', () => perform(profile));
   $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
   $('settingsNav').addEventListener('click', () => perform(settings));

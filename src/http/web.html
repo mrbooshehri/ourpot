@@ -163,7 +163,10 @@
 
       <section id="reportsPanel" data-page="reports" hidden class="stack">
         <div class="page-heading"><div><h1>Reports</h1><p class="subtle">Review household money over a selected time range.</p></div></div>
-        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-14"/><path d="M4 20h14"/></svg><p>Choose a date range to see income, expenses, transfers, and category trends.</p></div>
+        <form id="reportForm" class="card report-controls"><label>From<input name="from" type="date" required></label><label>To<input name="to" type="date" required></label><button>Update report</button></form>
+        <p id="reportStatus" class="hint"></p>
+        <div id="reportSummary" class="grid metrics" hidden><div class="card metric-card"><span class="label">Household income</span><strong id="reportIncome" class="metric">0</strong></div><div class="card metric-card"><span class="label">Household expenses</span><strong id="reportExpense" class="metric">0</strong></div><div class="card metric-card"><span class="label">Net change</span><strong id="reportNet" class="metric">0</strong></div></div>
+        <div class="grid two"><div class="card"><h2>Expenses by category</h2><ul id="reportCategories" class="compact-list"></ul></div><div class="card"><h2>Monthly activity</h2><ul id="reportMonthly" class="compact-list"></ul></div></div>
       </section>
 
       <section id="profilePanel" data-page="profile" hidden class="stack">
