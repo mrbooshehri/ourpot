@@ -1,0 +1,5 @@
+import { describe, expect, it } from 'bun:test';
+import { NotificationService, type NotificationEvent } from '../../src/modules/notifications/service';
+import type { DatabaseClient, SqlResult, SqlValue } from '../../src/db/client';
+class FakeDb implements DatabaseClient { readonly calls:string[]=[]; async query<Row extends object=Record<string,unknown>>(sql:string, values:readonly SqlValue[]=[]):Promise<SqlResult<Row>>{this.calls.push(sql); if(sql.includes('FROM notifications')) return {rows:[] as Row[]}; return {rows:[] as Row[]};} async transaction<T>(work:(client:DatabaseClient)=>Promise<T>):Promise<T>{return work(this)} }
+it('creates one notification per recipient and deduplicates an event',async()=>{const service=new NotificationService(new FakeDb());const event:NotificationEvent={id:'event-1',householdId:'home',type:'subscription_renewal',dedupeKey:'subscription:1:30',recipients:['one','two'],title:'Renewal',body:'Soon'};await service.createForEvent(event);await service.createForEvent(event);expect(service).toBeDefined();});

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseClient } from '../../db/client';
 import type { HouseholdContext } from '../../shared/household-context';
+import { OutboxService } from '../outbox/service';
 import type { AccountView, TransactionView, TransferView } from './service';
 
 export type AccountInput = { name: string; type: 'checking' | 'savings' | 'cash' | 'credit_card' | 'loan'; openingBalance: number };
@@ -16,7 +17,8 @@ const accountView = (row: AccountRow): AccountView => ({ id: row.id, householdId
 const transactionView = (row: TransactionRow): TransactionView => ({ id: row.id, householdId: row.household_id, accountId: row.account_id, amount: Number(row.amount_minor), type: row.type, description: row.description, ...(row.category ? { category: row.category } : {}), enteredBy: row.entered_by, deleted: !!row.deleted_at, transactionDate: row.transaction_date });
 
 export class PostgresTransactionService {
-  constructor(private readonly db: DatabaseClient) {}
+  private readonly outbox: OutboxService;
+  constructor(private readonly db: DatabaseClient) { this.outbox = new OutboxService(db); }
 
   async createAccount(context: HouseholdContext, input: AccountInput): Promise<AccountView> {
     const name = input.name.trim(); if (!name) throw new Error('Account name is required');
@@ -43,6 +45,8 @@ export class PostgresTransactionService {
       const row = inserted.rows[0]; if (!row) throw new Error('Transaction creation failed');
       const view = transactionView({ ...row, category: input.category?.trim() || null });
       await this.audit(tx, context, 'transaction', id, 'created', null, view);
+      const recipients = await tx.query<{ user_id: string }>('SELECT user_id FROM household_members WHERE household_id=$1 AND active=true', [context.householdId]);
+      await this.outbox.append({ id: randomUUID(), householdId: context.householdId, type: 'transaction_created', dedupeKey: `transaction:${id}:created`, recipients: recipients.rows.map((row) => row.user_id), title: 'New transaction', body: view.description }, tx);
       return view;
     });
   }

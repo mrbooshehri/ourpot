@@ -4,5 +4,5 @@ export const tableNames = [
   'accounts', 'categories', 'transactions', 'transfer_pairs',
   'budget_proposals', 'budget_agreements', 'budget_comments',
   'savings_goals', 'goal_contributions', 'wishlist_items', 'financial_tasks',
-  'subscriptions', 'reminders', 'audit_events', 'notification_rules',
+  'subscriptions', 'reminders', 'audit_events', 'notification_rules', 'outbox_events', 'notifications',
 ] as const;

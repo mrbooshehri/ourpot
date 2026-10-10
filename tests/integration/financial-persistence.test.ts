@@ -19,6 +19,7 @@ describe('durable household ledger', () => {
     const account = await first.createAccount(authorized, { name: 'Checking', type: 'checking', openingBalance: 100 });
     const income = await first.createIncome(authorized, { accountId: account.id, amount: 500, description: 'Salary', category: 'Work', transactionDate: '2026-01-01' });
     expect(income.amount).toBe(500);
+    expect((await db.query<{ count: number }>('SELECT count(*)::int AS count FROM outbox_events WHERE household_id=$1', [householdId])).rows[0]?.count).toBe(1);
     const second = new PostgresTransactionService(db);
     const dashboard = await second.getDashboard(authorized);
     expect(dashboard.accounts[0]).toMatchObject({ id: account.id, balance: 600 });

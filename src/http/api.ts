@@ -8,6 +8,7 @@ import { PostgresPlanningService } from '../modules/planning/postgres-service';
 import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
 import { PostgresTaskSubscriptionService } from '../modules/tasks/postgres-service';
 import { RulesService } from '../modules/rules';
+import { NotificationService } from '../modules/notifications/service';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
@@ -28,11 +29,13 @@ export class ApiApp {
   readonly postgresPlanning: PostgresPlanningService;
   readonly postgresTasks: PostgresTaskSubscriptionService;
   readonly rules: RulesService;
+  readonly notifications: NotificationService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
     this.households = new PostgresHouseholdService(db);
     this.identity = new IdentityService(db, config);
     this.rules = new RulesService(db);
+    this.notifications = new NotificationService(db);
     this.postgresLedger = new PostgresTransactionService(db);
     this.postgresPlanning = new PostgresPlanningService(db);
     this.postgresTasks = new PostgresTaskSubscriptionService(db);
@@ -114,6 +117,16 @@ export class ApiApp {
       if (request.method === 'POST' && url.pathname === '/api/auth/change-password') {
         const body = await request.json() as Record<string, unknown>;
         await this.identity.changePassword(principal, String(body.currentPassword ?? ''), String(body.newPassword ?? ''));
+        return json({ ok: true });
+      }
+      if (request.method === 'GET' && url.pathname === '/api/v1/notifications') {
+        const limit = Math.min(Number(url.searchParams.get('limit') ?? 20), 100);
+        const offset = Math.max(Number(url.searchParams.get('offset') ?? 0), 0);
+        return json(await this.notifications.listForUser(principal.userId, { limit, offset }));
+      }
+      if (request.method === 'POST' && url.pathname.startsWith('/api/v1/notifications/') && url.pathname.endsWith('/read')) {
+        const id = decodeURIComponent(url.pathname.slice('/api/v1/notifications/'.length, -'/read'.length));
+        await this.notifications.markRead(principal.userId, id);
         return json({ ok: true });
       }
       if (principal.mustChangePassword) return json({ error: 'Password change required' }, 403);
