@@ -154,9 +154,23 @@
       </section>
 
       <section id="settingsPanel" data-page="settings" hidden class="stack">
-        <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Control your sign-in methods and active sessions.</p></div></div>
+        <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Choose your language and review household preferences.</p></div></div>
         <div class="grid two">
-          <div class="card"><h2>Language</h2><p class="hint">Choose the layout direction for this account.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
+          <div class="card"><h2>Language</h2><p class="hint">English uses left-to-right layout. Persian and Arabic use right-to-left layout.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
+          <div class="card"><h2>Household</h2><p class="hint">Shared accounts and planning are visible to both partners. Notification behavior is managed on the Rules page.</p></div>
+        </div>
+      </section>
+
+      <section id="reportsPanel" data-page="reports" hidden class="stack">
+        <div class="page-heading"><div><h1>Reports</h1><p class="subtle">Review household money over a selected time range.</p></div></div>
+        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-14"/><path d="M4 20h14"/></svg><p>Choose a date range to see income, expenses, transfers, and category trends.</p></div>
+      </section>
+
+      <section id="profilePanel" data-page="profile" hidden class="stack">
+        <div class="page-heading"><div><h1>Profile</h1><p class="subtle">Manage your name, password, sign-in methods, and active sessions.</p></div></div>
+        <div class="grid two">
+          <div class="card"><h2>Personal details</h2><p id="profileEmail" class="hint"></p><form id="profileForm" class="stack"><label>Display name<input name="displayName" maxlength="100" autocomplete="name" required></label><button>Save name</button></form></div>
+          <div class="card"><h2>Change password</h2><form id="profilePasswordForm" class="stack"><label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label><label>New password<input name="newPassword" type="password" minlength="12" autocomplete="new-password" required></label><button>Change password</button></form></div>
           <div class="card"><h2>Active sessions</h2><p class="hint">These are your sessions only. Revocation takes effect on the next request.</p><ul id="sessionList" class="compact-list"></ul></div>
           <div class="card"><h2>Passkeys</h2><p class="hint">Use a device PIN or biometric to sign in without a password.</p><ul id="passkeyList" class="compact-list"></ul>
             <label>Passkey name<input id="passkeyName" value="My device" maxlength="100"></label><button type="button" id="addPasskeyButton">Add passkey</button>
@@ -179,16 +193,6 @@
             <button type="button" id="passkeyReauthButton" class="secondary" hidden>Confirm with passkey</button>
           </div>
         </div>
-      </section>
-
-      <section id="reportsPanel" data-page="reports" hidden class="stack">
-        <div class="page-heading"><div><h1>Reports</h1><p class="subtle">Review household money over a selected time range.</p></div></div>
-        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-14"/><path d="M4 20h14"/></svg><p>Choose a date range to see income, expenses, transfers, and category trends.</p></div>
-      </section>
-
-      <section id="profilePanel" data-page="profile" hidden class="stack">
-        <div class="page-heading"><div><h1>Profile</h1><p class="subtle">Manage your name and sign-in details.</p></div></div>
-        <div class="card page-placeholder"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"/></svg><p>Your profile and security controls will appear here.</p></div>
       </section>
 
       <section id="rulesPanel" data-page="rules" hidden class="stack">

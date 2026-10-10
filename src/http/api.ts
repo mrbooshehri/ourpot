@@ -104,6 +104,11 @@ export class ApiApp {
         return json({ ok: true });
       }
       if (principal.mustChangePassword) return json({ error: 'Password change required' }, 403);
+      if (request.method === 'GET' && url.pathname === '/api/profile') return json(await this.identity.getProfile(principal.userId));
+      if (request.method === 'PATCH' && url.pathname === '/api/profile') {
+        const body = await request.json() as Record<string, unknown>;
+        return json(await this.identity.updateProfile(principal.userId, String(body.displayName ?? '')));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/users') {
         if (principal.systemRole !== 'root_admin') return json({ error: 'Administrator access required' }, 403);
         return json({ users: await this.identity.listManagedUsers() });

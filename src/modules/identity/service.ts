@@ -70,6 +70,20 @@ export class IdentityService {
     return this.users.getLanguage(userId);
   }
 
+  async getProfile(userId: string): Promise<{ email: string; displayName: string | null; mfaEnabled: boolean; passkeyCount: number }> {
+    const user = await this.users.findUserById(userId);
+    if (!user || user.disabledAt) throw new Error('Authentication required');
+    const [mfa, passkeys] = await Promise.all([this.mfaStatus(userId), this.listPasskeys(userId)]);
+    return { email: user.email, displayName: user.displayName, mfaEnabled: mfa.enabled, passkeyCount: passkeys.length };
+  }
+
+  async updateProfile(userId: string, displayName: string) {
+    const name = displayName.trim();
+    if (!name || name.length > 100) throw new Error('Display name must be 1 to 100 characters');
+    await this.users.setDisplayName(userId, name);
+    return this.getProfile(userId);
+  }
+
   async setLanguage(userId: string, language: string): Promise<PreferredLanguage> {
     if (language !== 'en' && language !== 'fa' && language !== 'ar') throw new Error('Unsupported language');
     await this.users.setLanguage(userId, language);

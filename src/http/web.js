@@ -179,12 +179,13 @@
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
 
-  async function settings() {
-    show('settingsPanel');
-    const [sessionsData, mfa, passkeysData, languageData] = await Promise.all([
-      api('/api/settings/sessions'), api('/api/settings/mfa'), api('/api/settings/passkeys'), api('/api/settings/language'),
+  async function profile() {
+    show('profilePanel');
+    const [profileData, sessionsData, mfa, passkeysData] = await Promise.all([
+      api('/api/profile'), api('/api/settings/sessions'), api('/api/settings/mfa'), api('/api/settings/passkeys'),
     ]);
-    $('languageForm').elements.language.value = languageData.language;
+    $('profileEmail').textContent = profileData.email;
+    $('profileForm').elements.displayName.value = profileData.displayName || '';
     const sessions = $('sessionList'); sessions.replaceChildren();
     for (const session of sessionsData.sessions) {
       const label = (session.userAgent || 'Unknown browser') + (session.current ? ' · Current session' : '') +
@@ -192,7 +193,7 @@
       item(sessions, label, button(session.current ? 'Sign out' : 'Revoke', async () => {
         await api('/api/settings/sessions/' + encodeURIComponent(session.id), 'DELETE');
         if (session.current) { show('authPanel'); status('Signed out.', true); }
-        else { await settings(); status('Session revoked.', true); }
+        else { await profile(); status('Session revoked.', true); }
       }, session.current));
     }
     $('mfaStatus').textContent = mfa.enabled ? 'Enabled · ' + mfa.unusedRecoveryCodes + ' unused recovery codes' : 'Not enabled';
@@ -206,7 +207,7 @@
         const name = prompt('Passkey name', passkey.name);
         if (name === null) return;
         await api('/api/settings/passkeys/' + encodeURIComponent(passkey.id), 'PATCH', { name });
-        await settings();
+        await profile();
       }));
       actions.append(button('Remove', async () => {
         await api('/api/settings/passkeys/' + encodeURIComponent(passkey.id), 'DELETE');
@@ -214,6 +215,12 @@
       }, true));
       item(passkeys, passkey.name + ' · Added ' + new Date(passkey.createdAt).toLocaleDateString(), actions);
     }
+  }
+
+  async function settings() {
+    show('settingsPanel');
+    const languageData = await api('/api/settings/language');
+    $('languageForm').elements.language.value = languageData.language;
   }
 
   bindForm('loginForm', passwordLogin);
@@ -255,13 +262,15 @@
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
   $('reportsNav').addEventListener('click', () => perform(async () => { show('reportsPanel'); }));
-  $('profileNav').addEventListener('click', () => perform(async () => { show('profilePanel'); }));
+  $('profileNav').addEventListener('click', () => perform(profile));
   $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
   $('settingsNav').addEventListener('click', () => perform(settings));
   $('rulesNav').addEventListener('click', () => perform(async () => { show('rulesPanel'); }));
   $('logoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   $('passwordChangeLogoutButton').addEventListener('click', () => perform(async () => { await api('/api/auth/logout', 'POST', {}); show('authPanel'); status('Signed out.', true); }));
   bindForm('passwordChangeForm', async (values) => { await api('/api/auth/change-password', 'POST', values); await checkAuth(); status('Password changed.', true); });
+  bindForm('profileForm', async (values) => { await api('/api/profile', 'PATCH', values); await profile(); status('Profile saved.', true); });
+  bindForm('profilePasswordForm', async (values) => { await api('/api/auth/change-password', 'POST', values); $('profilePasswordForm').reset(); status('Password changed.', true); });
   async function adminUsers() {
     const data = await api('/api/admin/users');
     const list = $('adminUserList'); list.replaceChildren();
@@ -284,18 +293,18 @@
     $('mfaSecret').textContent = '';
     $('recoveryCodes').textContent = result.recoveryCodes.join('\n');
     $('recoveryPanel').hidden = false;
-    await settings(); status('MFA enabled. Save your recovery codes now.', true);
+    await profile(); status('MFA enabled. Save your recovery codes now.', true);
   });
   $('regenerateCodesButton').addEventListener('click', () => perform(async () => {
     const result = await api('/api/settings/mfa/recovery-codes', 'POST', {});
     $('recoveryCodes').textContent = result.recoveryCodes.join('\n');
     $('recoveryPanel').hidden = false;
-    await settings(); status('Recovery codes replaced. Save the new codes now.', true);
+    await profile(); status('Recovery codes replaced. Save the new codes now.', true);
   }));
   $('disableMfaButton').addEventListener('click', () => perform(async () => {
     await api('/api/settings/mfa', 'DELETE');
     $('recoveryPanel').hidden = true;
-    await settings(); status('MFA disabled.', true);
+    await profile(); status('MFA disabled.', true);
   }));
 
   const passkeys = globalThis.SimpleWebAuthnBrowser;
@@ -314,7 +323,7 @@
     const begin = await api('/api/settings/passkeys/options', 'POST', {});
     const response = await passkeys.startRegistration({ optionsJSON: begin.options });
     await api('/api/settings/passkeys/verify', 'POST', { response, name });
-    await settings(); status('Passkey added.', true);
+    await profile(); status('Passkey added.', true);
   }));
   $('passkeyReauthButton').addEventListener('click', () => perform(async () => {
     const begin = await api('/api/auth/passkey/reauthenticate/options', 'POST', {});

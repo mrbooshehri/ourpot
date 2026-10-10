@@ -18,6 +18,26 @@ const post = (path: string, body: unknown, cookie = '') => new Request(`${origin
 const seedUser = async (email: string) => new IdentityService(createDatabaseClient(), config).register(email, 'correct horse battery staple');
 
 describe('authenticated HTTP API', () => {
+  it('reads and changes only the signed-in profile display name', async () => {
+    const app = new ApiApp(createDatabaseClient(), config);
+    const firstEmail = `profile-${randomUUID()}@example.com`;
+    const secondEmail = `profile-${randomUUID()}@example.com`;
+    await seedUser(firstEmail); await seedUser(secondEmail);
+    const firstLogin = await app.fetch(post('/api/auth/login', { email: firstEmail, password: 'correct horse battery staple' }));
+    const secondLogin = await app.fetch(post('/api/auth/login', { email: secondEmail, password: 'correct horse battery staple' }));
+    const firstCookie = firstLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const secondCookie = secondLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const before = await app.fetch(new Request(`${origin}/api/profile`, { headers: { cookie: firstCookie } }));
+    expect(before.status).toBe(200);
+    expect(await before.json()).toMatchObject({ email: firstEmail, displayName: null });
+    const changed = await app.fetch(new Request(`${origin}/api/profile`, { method: 'PATCH', headers: { cookie: firstCookie, origin, 'x-ourpot-request': '1', 'content-type': 'application/json' }, body: JSON.stringify({ displayName: '  Alex  ', userId: 'someone-else' }) }));
+    expect(changed.status).toBe(200);
+    expect(await changed.json()).toMatchObject({ email: firstEmail, displayName: 'Alex' });
+    const other = await app.fetch(new Request(`${origin}/api/profile`, { headers: { cookie: secondCookie } }));
+    expect(await other.json()).toMatchObject({ email: secondEmail, displayName: null });
+    const invalid = await app.fetch(new Request(`${origin}/api/profile`, { method: 'PATCH', headers: { cookie: firstCookie, origin, 'x-ourpot-request': '1', 'content-type': 'application/json' }, body: JSON.stringify({ displayName: ' ' }) }));
+    expect(invalid.status).toBe(400);
+  });
   it('uses cookie identity for household access and rejects forged headers', async () => {
     const app = new ApiApp(createDatabaseClient(), config);
     const email = `http-${randomUUID()}@example.com`;

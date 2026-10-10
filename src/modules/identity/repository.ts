@@ -96,6 +96,10 @@ export class IdentityRepository {
     await this.db.query('UPDATE users SET preferred_language = $2 WHERE id = $1', [userId, language]);
   }
 
+  async setDisplayName(userId: string, displayName: string): Promise<void> {
+    await this.db.query('UPDATE users SET display_name = $2 WHERE id = $1', [userId, displayName]);
+  }
+
   async setPassword(userId: string, passwordHash: string, mustChangePassword = false): Promise<void> {
     await this.db.query('UPDATE users SET password_hash = $2, must_change_password = $3 WHERE id = $1', [userId, passwordHash, mustChangePassword]);
   }
