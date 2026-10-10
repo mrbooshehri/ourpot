@@ -36,3 +36,13 @@ describe('PostgreSQL repository boundaries', () => {
     expect((await ledger.totals(context))).toEqual({ householdIncome: 500, householdExpense: 200 });
   });
 });
+
+describe('repository query scoping', () => {
+  it('includes the household predicate in aggregate reads', async () => {
+    const db = new FakeDb();
+    await new PostgresLedgerRepository(db).totals(context);
+    const query = db.calls.find((call) => call.sql.includes('household_income'));
+    expect(query?.sql).toContain('WHERE household_id = $1');
+    expect(query?.values).toEqual(['h1']);
+  });
+});
