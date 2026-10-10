@@ -14,6 +14,14 @@ describe('HTTP API', () => {
     expect(html).toContain('name="viewport"');
     expect(html).toContain('id="loginForm"');
     expect(html).toContain('id="sessionList"');
+    expect(html).toContain('id="languageForm"');
+    expect(html).toContain('id="destinationField" hidden');
+    expect(html).toContain('id="budgetList"');
+    expect(html).toContain('id="subscriptionList"');
+    expect(html).toContain('Combined household');
+    expect(html).toContain('Partner activity');
+    expect(html).toContain('Transfers are excluded from income and expenses');
+    expect(html).toContain('totalsHelp');
     expect(html).not.toContain('/api/demo/setup');
     expect(html).not.toContain('x-user-id');
   });

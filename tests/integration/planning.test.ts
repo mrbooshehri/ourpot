@@ -35,4 +35,15 @@ describe('household planning', () => {
     const goal = planning.createGoal(owner, 'Private goal', 1000);
     expect(() => planning.addContribution(outsider, goal.id, 100, 'Nope')).toThrow('Household access denied');
   });
+
+  it('lists household planning items for the shared dashboard', () => {
+    const planning = new PlanningService();
+    const budget = planning.proposeBudget(owner, 'Food', 5000, '2026-10', 'Groceries');
+    const goal = planning.createGoal(owner, 'Emergency fund', 10000);
+    planning.createWish(owner, 'Weekend trip', 3000);
+    expect(planning.listBudgets(owner)).toEqual([budget]);
+    expect(planning.listGoals(owner)).toEqual([expect.objectContaining({ id: goal.id })]);
+    expect(planning.listWishes(owner)).toHaveLength(1);
+    expect(planning.listBudgets(outsider)).toHaveLength(0);
+  });
 });

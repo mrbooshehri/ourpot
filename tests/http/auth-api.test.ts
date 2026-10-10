@@ -32,6 +32,13 @@ describe('authenticated HTTP API', () => {
     expect(household.status).toBe(201);
     const dashboard = await app.fetch(new Request(`${origin}/api/dashboard`, { headers: { cookie } }));
     expect(dashboard.status).toBe(200);
+    const dashboardData = await dashboard.json() as { budgets: unknown[]; goals: unknown[]; tasks: unknown[]; subscriptions: unknown[]; reminders: unknown[]; members: unknown[] };
+    expect(dashboardData.budgets).toEqual([]);
+    expect(dashboardData.goals).toEqual([]);
+    expect(dashboardData.tasks).toEqual([]);
+    expect(dashboardData.subscriptions).toEqual([]);
+    expect(dashboardData.reminders).toEqual([]);
+    expect(dashboardData.members.length).toBeGreaterThan(0);
     const sessions = await app.fetch(new Request(`${origin}/api/settings/sessions`, { headers: { cookie } }));
     const listed = await sessions.json() as { sessions: Array<{ id: string; current: boolean }> };
     expect(listed.sessions).toHaveLength(1);
@@ -119,7 +126,7 @@ describe('authenticated HTTP API', () => {
     const login = await app.fetch(post('/api/auth/login', { email: rootEmail, password: 'root password long enough' }));
     const rootCookie = login.headers.get('set-cookie')?.split(';')[0] ?? '';
     const createdEmail = `managed-${randomUUID()}@example.com`;
-    const created = await app.fetch(post('/api/admin/users', { email: createdEmail, temporaryPassword: 'temporary password long enough' }, rootCookie));
+    const created = await app.fetch(post('/api/admin/users', { email: createdEmail, displayName: 'Partner One', temporaryPassword: 'temporary password long enough' }, rootCookie));
     expect(created.status).toBe(201);
     const managedLogin = await app.fetch(post('/api/auth/login', { email: createdEmail, password: 'temporary password long enough' }));
     const managedCookie = managedLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
@@ -131,5 +138,18 @@ describe('authenticated HTTP API', () => {
     const normalCookie = normalLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
     expect((await app.fetch(new Request(`${origin}/api/admin/users`, { headers: { cookie: normalCookie } }))).status).toBe(403);
     expect(root.systemRole).toBe('root_admin');
+  });
+
+  it('shows and updates the signed-in user language preference', async () => {
+    const app = new ApiApp(createDatabaseClient(), config);
+    const email = `language-${randomUUID()}@example.com`;
+    await seedUser(email);
+    const login = await app.fetch(post('/api/auth/login', { email, password: 'correct horse battery staple' }));
+    const cookie = login.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const current = await app.fetch(new Request(`${origin}/api/settings/language`, { headers: { cookie } }));
+    expect(await current.json()).toEqual({ language: 'en' });
+    const updated = await app.fetch(post('/api/settings/language', { language: 'fa' }, cookie));
+    expect(updated.status).toBe(200);
+    expect(await updated.json()).toEqual({ language: 'fa' });
   });
 });

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,29 +70,39 @@
       <section id="adminPanel" hidden class="stack">
         <div class="page-heading"><div><h1>Administration</h1><p class="subtle">Create accounts for household members and share their temporary credentials securely.</p></div></div>
         <div class="grid two">
-          <div class="card"><h2>Create user</h2><form id="adminUserForm" class="stack"><label>Email<input name="email" type="email" required></label><label>Temporary password<input name="temporaryPassword" type="password" minlength="12" required></label><button>Create user</button></form><p id="adminUserResult" class="hint"></p></div>
+          <div class="card"><h2>Create user</h2><form id="adminUserForm" class="stack"><label>Display name<input name="displayName" required></label><label>Email<input name="email" type="email" required></label><label>Temporary password<input name="temporaryPassword" type="password" minlength="12" required></label><button>Create user</button></form><p id="adminUserResult" class="hint"></p></div>
           <div class="card"><h2>Users</h2><ul id="adminUserList" class="compact-list"></ul></div>
         </div>
       </section>
 
       <section id="dashboardPanel" hidden class="stack">
         <div class="page-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div></div>
-        <div class="grid metrics">
-          <div class="card"><span class="label">Household income</span><strong id="income" class="metric">—</strong></div>
-          <div class="card"><span class="label">Household expenses</span><strong id="expense" class="metric">—</strong></div>
-          <div class="card"><span class="label">Entered by each partner</span><ul id="entrantTotals" class="compact-list"></ul></div>
-        </div>
+        <section class="card overview" aria-labelledby="combined-household-heading">
+          <div class="page-heading"><div><h2 id="combined-household-heading">Combined household</h2><p class="subtle">Both partners together</p></div></div>
+          <div class="grid metrics">
+            <div class="card metric-card"><span class="label">Income</span><strong id="income" class="metric">—</strong><p class="hint">Income transactions entered by either partner.</p></div>
+            <div class="card metric-card"><span class="label">Expenses</span><strong id="expense" class="metric">—</strong><p class="hint">Expense transactions entered by either partner.</p></div>
+            <div class="card metric-card"><span class="label">Net change</span><strong id="netChange" class="metric">—</strong><p class="hint">Income minus expenses.</p></div>
+            <div class="card metric-card"><span class="label">Account balance</span><strong id="balance" class="metric">—</strong><p class="hint">Opening balances plus account movements.</p></div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="partner-activity-heading">
+          <div class="page-heading"><div><h2 id="partner-activity-heading">Partner activity</h2><p class="subtle">Who entered the income and expenses</p></div></div>
+          <div id="partnerTotals" class="partner-totals"></div>
+          <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
+        </section>
+        <details id="totalsHelp" class="card totals-help"><summary>How these totals are calculated</summary><p class="hint">Household totals combine both partners. Transfers are excluded from income and expenses because they move money between accounts. Opening balances affect account balance but are not income.</p></details>
         <div class="grid two">
           <div class="card"><h2>Accounts</h2><ul id="accountList" class="compact-list"></ul><form id="accountForm" class="stack inset">
             <label>Name<input name="name" required></label>
             <label>Type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="cash">Cash</option><option value="credit_card">Credit card</option><option value="loan">Loan</option></select></label>
-            <label>Opening balance (minor units)<input name="openingBalance" type="number" min="0" step="1" value="0" required></label>
+            <label>Opening balance (minor units)<input name="openingBalance" type="number" min="0" step="1" value="0" required></label><p class="hint">This sets the starting account balance. It is not counted as income.</p>
             <button>Add account</button>
           </form></div>
           <div class="card"><h2>Record a transaction</h2><form id="transactionForm" class="stack">
             <label>Account<select name="accountId" id="accounts" required></select></label>
             <label>Type<select name="type"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option></select></label>
-            <label>Destination (for transfers)<select name="destinationAccountId" id="destinationAccounts"></select></label>
+            <label id="destinationField" hidden>Destination (for transfers)<select name="destinationAccountId" id="destinationAccounts" disabled></select></label>
             <label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
             <label>Description<input name="description" required></label>
             <label>Category<input name="category" value="General"></label>
@@ -117,6 +127,12 @@
           </form></div>
         </div>
         <div class="grid two">
+          <div class="card"><h2>Budgets</h2><ul id="budgetList" class="compact-list"></ul></div>
+          <div class="card"><h2>Savings goals</h2><ul id="goalList" class="compact-list"></ul></div>
+          <div class="card"><h2>Required tasks</h2><ul id="taskList" class="compact-list"></ul></div>
+          <div class="card"><h2>Subscriptions and reminders</h2><ul id="subscriptionList" class="compact-list"></ul><ul id="reminderList" class="compact-list"></ul></div>
+        </div>
+        <div class="grid two">
           <div class="card"><h2>Invite your partner</h2><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
           <div class="card"><h2>Recent activity</h2><ul id="auditList" class="compact-list"></ul></div>
         </div>
@@ -125,6 +141,7 @@
       <section id="settingsPanel" hidden class="stack">
         <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Control your sign-in methods and active sessions.</p></div></div>
         <div class="grid two">
+          <div class="card"><h2>Language</h2><p class="hint">Choose the layout direction for this account.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
           <div class="card"><h2>Active sessions</h2><p class="hint">These are your sessions only. Revocation takes effect on the next request.</p><ul id="sessionList" class="compact-list"></ul></div>
           <div class="card"><h2>Passkeys</h2><p class="hint">Use a device PIN or biometric to sign in without a password.</p><ul id="passkeyList" class="compact-list"></ul>
             <label>Passkey name<input id="passkeyName" value="My device" maxlength="100"></label><button type="button" id="addPasskeyButton">Add passkey</button>

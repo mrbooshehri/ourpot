@@ -40,6 +40,12 @@ export class TaskSubscriptionService {
     return { ...task };
   }
 
+  listTasks(context: HouseholdContext): TaskView[] {
+    return [...this.tasks.values()]
+      .filter((task) => task.householdId === context.householdId)
+      .map((task) => ({ ...task }));
+  }
+
   createSubscription(context: HouseholdContext, name: string, price: number, cadence: Subscription['cadence'], nextRenewalDate: string): SubscriptionView {
     positive(price);
     dateOnly(nextRenewalDate);
@@ -58,6 +64,12 @@ export class TaskSubscriptionService {
     const subscription = this.subscriptions.get(subscriptionId);
     if (!subscription) throw new Error('Subscription not found');
     return { ...subscription };
+  }
+
+  listSubscriptions(context: HouseholdContext): SubscriptionView[] {
+    return [...this.subscriptions.values()]
+      .filter((subscription) => subscription.householdId === context.householdId)
+      .map((subscription) => ({ ...subscription }));
   }
 
   generateReminders(context: HouseholdContext, now: Date): ReminderView[] {

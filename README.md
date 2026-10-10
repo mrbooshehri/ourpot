@@ -4,7 +4,7 @@ A shared household money planning app for two partners. Both partners can view h
 
 ## Project status
 
-**Implementation in progress. Password sessions, optional authenticator MFA, passkeys, household membership checks, a responsive security Settings page, and focused PostgreSQL tests are present. Financial domain modules still need their approved PostgreSQL persistence work before the complete money MVP is release-ready.**
+**Implementation in progress. Password sessions, optional authenticator MFA, passkeys, household membership checks, a responsive security Settings page, account-name uniqueness, opening-balance reporting, language direction settings, household planning lists, and focused PostgreSQL tests are present. Financial domain modules still need their approved PostgreSQL persistence work before the complete money MVP is release-ready.**
 
 The MVP decisions required for implementation are resolved in [docs/product-spec.md](docs/product-spec.md). Product extensions and infrastructure choices that are not needed for the first release remain explicitly deferred.
 
@@ -38,3 +38,5 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 The detailed plan is in [docs/superpowers/plans/2026-10-06-household-money-mvp.md](docs/superpowers/plans/2026-10-06-household-money-mvp.md). It covers foundation, identity and access, the financial ledger, planning features, tasks and reminders, the responsive web surface, and release verification.
 
 The MVP plan and authentication plan are approved. Work is continuing in small verified steps; Git history remains untouched because the repository's `.git` metadata is empty.
+
+Account names are unique within a household (case-insensitive, after trimming). Opening balances contribute to account balances; household income reports only income transactions.

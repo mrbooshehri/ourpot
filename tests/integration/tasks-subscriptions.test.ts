@@ -31,4 +31,13 @@ describe('tasks and subscriptions', () => {
     const task = service.createTask(owner, 'Household task', 'u1', '2026-01-01');
     expect(() => service.completeTask(outsider, task.id)).toThrow('Household access denied');
   });
+
+  it('lists household tasks and subscriptions for the dashboard', () => {
+    const service = new TaskSubscriptionService();
+    const task = service.createTask(owner, 'Pay bill', 'u1', '2026-11-01');
+    const subscription = service.createSubscription(owner, 'Gym', 3000, 'monthly', '2026-11-15');
+    expect(service.listTasks(owner)).toEqual([task]);
+    expect(service.listSubscriptions(owner)).toEqual([subscription]);
+    expect(service.listTasks(outsider)).toHaveLength(0);
+  });
 });

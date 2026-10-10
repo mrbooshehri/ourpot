@@ -3,6 +3,12 @@
   const $ = (id) => document.getElementById(id);
   let hasHousehold = false;
 
+  function applyLanguage(language) {
+    const locale = language === 'fa' || language === 'ar' ? language : 'en';
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === 'en' ? 'ltr' : 'rtl';
+  }
+
   function status(message, good = false) {
     $('status').textContent = message || '';
     $('status').style.color = good ? '#1d5b4a' : '#8c302e';
@@ -60,9 +66,13 @@
       hasHousehold = !!me.household;
       $('adminNav').hidden = me.systemRole !== 'root_admin';
       if (me.mustChangePassword) show('passwordChangePanel');
-      else if (me.systemRole === 'root_admin') { show('adminPanel'); await adminUsers(); }
-      else if (hasHousehold) { show('dashboardPanel'); await dashboard(); }
-      else show('setupPanel');
+      else {
+        const language = await api('/api/settings/language');
+        applyLanguage(language.language);
+        if (me.systemRole === 'root_admin') { show('adminPanel'); await adminUsers(); }
+        else if (hasHousehold) { show('dashboardPanel'); await dashboard(); }
+        else show('setupPanel');
+      }
     } catch (error) {
       if (error.message === 'Authentication required') show('authPanel');
       else status(error.message);
@@ -84,33 +94,85 @@
     const data = await api('/api/dashboard');
     $('income').textContent = String(data.totals.householdIncome) + ' minor units';
     $('expense').textContent = String(data.totals.householdExpense) + ' minor units';
+    $('netChange').textContent = String(data.totals.householdIncome - data.totals.householdExpense) + ' minor units';
+    $('balance').textContent = String(data.accounts.reduce((total, account) => total + account.balance, 0)) + ' minor units';
     const accounts = $('accountList'); accounts.replaceChildren();
-    const entrants = $('entrantTotals'); entrants.replaceChildren();
     const audits = $('auditList'); audits.replaceChildren();
+    const memberNames = Object.fromEntries((data.members || []).map((member) => [member.userId, member.displayName]));
     for (const account of data.accounts) {
       item(accounts, account.name + ': ' + account.balance + (account.balance < 0 ? ' · negative balance' : ''));
     }
-    for (const [userId, totals] of Object.entries(data.totals.byEntrant || {})) {
-      item(entrants, userId + ' · income ' + totals.income + ', expenses ' + totals.expense);
-    }
     for (const event of (data.audits || []).slice(-8).reverse()) {
-      item(audits, event.action + ' · ' + event.entityType + ' · by ' + event.actorUserId);
+      item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
     }
     for (const select of [$('accounts'), $('destinationAccounts')]) {
       select.replaceChildren();
-      for (const account of data.accounts.filter((entry) => !entry.archived)) {
+      const activeAccounts = data.accounts.filter((entry) => !entry.archived);
+      if (!activeAccounts.length) {
+        const option = document.createElement('option');
+        option.textContent = 'There is no account'; option.value = ''; option.disabled = true; option.selected = true;
+        select.append(option);
+      }
+      for (const account of activeAccounts) {
         const option = document.createElement('option');
         option.value = account.id; option.textContent = account.name;
         select.append(option);
       }
     }
+    $('transactionForm').querySelector('button').disabled = !data.accounts.some((entry) => !entry.archived);
+    renderPartnerTotals(data, memberNames);
+    renderPlanning(data, memberNames);
+  }
+
+  function renderPartnerTotals(data, memberNames) {
+    const byEntrant = data.totals.byEntrant || {};
+    const members = data.members || [];
+    const ids = members.length ? members.map((member) => member.userId) : Object.keys(byEntrant);
+    if (members.length === 1) ids.push(null);
+    const container = $('partnerTotals'); container.replaceChildren();
+    if (!ids.length) {
+      const empty = document.createElement('p'); empty.className = 'hint'; empty.textContent = 'Waiting for household members.'; container.append(empty); return;
+    }
+    for (const userId of ids) {
+      if (userId === null) {
+        const waiting = document.createElement('article'); waiting.className = 'partner-summary waiting';
+        const heading = document.createElement('h3'); heading.textContent = 'Waiting for partner'; waiting.append(heading);
+        const message = document.createElement('p'); message.className = 'hint'; message.textContent = 'Invite your partner to see their activity here.'; waiting.append(message);
+        container.append(waiting); continue;
+      }
+      const totals = byEntrant[userId] || { income: 0, expense: 0 };
+      const article = document.createElement('article'); article.className = 'partner-summary';
+      const heading = document.createElement('h3'); heading.textContent = memberNames[userId] || 'Household member'; article.append(heading);
+      const values = document.createElement('div'); values.className = 'partner-summary-values';
+      for (const [label, value] of [['Income entered', totals.income], ['Expenses entered', totals.expense], ['Net entered', totals.income - totals.expense]]) {
+        const row = document.createElement('div');
+        const name = document.createElement('span'); name.className = 'label'; name.textContent = label;
+        const amount = document.createElement('strong'); amount.textContent = `${value} minor units`;
+        row.append(name, amount); values.append(row);
+      }
+      article.append(values); container.append(article);
+    }
+  }
+
+  function renderPlanning(data, memberNames) {
+    const budgets = $('budgetList'); budgets.replaceChildren();
+    for (const budget of data.budgets || []) item(budgets, `${budget.category} · ${budget.amount} · ${budget.period} · ${budget.status} · proposed by ${memberNames[budget.proposerId] || 'Household member'}`);
+    const goals = $('goalList'); goals.replaceChildren();
+    for (const goal of data.goals || []) item(goals, `${goal.name} · ${goal.contributedAmount}/${goal.targetAmount} · ${goal.status}`);
+    const tasks = $('taskList'); tasks.replaceChildren();
+    for (const task of data.tasks || []) item(tasks, `${task.title} · due ${task.dueDate} · assigned to ${memberNames[task.assigneeId] || 'Household member'} · ${task.status}`);
+    const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
+    for (const subscription of data.subscriptions || []) item(subscriptions, `${subscription.name} · ${subscription.price} · renews ${subscription.nextRenewalDate}`);
+    const reminders = $('reminderList'); reminders.replaceChildren();
+    for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
 
   async function settings() {
     show('settingsPanel');
-    const [sessionsData, mfa, passkeysData] = await Promise.all([
-      api('/api/settings/sessions'), api('/api/settings/mfa'), api('/api/settings/passkeys'),
+    const [sessionsData, mfa, passkeysData, languageData] = await Promise.all([
+      api('/api/settings/sessions'), api('/api/settings/mfa'), api('/api/settings/passkeys'), api('/api/settings/language'),
     ]);
+    $('languageForm').elements.language.value = languageData.language;
     const sessions = $('sessionList'); sessions.replaceChildren();
     for (const session of sessionsData.sessions) {
       const label = (session.userAgent || 'Unknown browser') + (session.current ? ' · Current session' : '') +
@@ -162,12 +224,18 @@
     await api('/api/transactions', 'POST', values);
     await dashboard(); status('Transaction recorded.', true);
   });
+  $('transactionForm').elements.type.addEventListener('change', (event) => {
+    const transfer = event.currentTarget.value === 'transfer';
+    $('destinationField').hidden = !transfer;
+    $('destinationAccounts').disabled = !transfer;
+    $('destinationAccounts').required = transfer;
+  });
   for (const [id, path, success] of [
     ['budgetForm', '/api/budgets', 'Budget proposed.'],
     ['goalForm', '/api/goals', 'Goal created.'],
     ['taskForm', '/api/tasks', 'Task created.'],
     ['subscriptionForm', '/api/subscriptions', 'Subscription added.'],
-  ]) bindForm(id, async (values) => { await api(path, 'POST', values); status(success, true); });
+  ]) bindForm(id, async (values) => { await api(path, 'POST', values); await dashboard(); status(success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
   $('adminNav').addEventListener('click', () => perform(async () => { show('adminPanel'); await adminUsers(); }));
@@ -178,9 +246,10 @@
   async function adminUsers() {
     const data = await api('/api/admin/users');
     const list = $('adminUserList'); list.replaceChildren();
-    for (const user of data.users) item(list, user.email + (user.systemRole === 'root_admin' ? ' · administrator' : '') + (user.mustChangePassword ? ' · password change required' : '') + (user.disabledAt ? ' · disabled' : ''));
+    for (const user of data.users) item(list, (user.displayName || user.email) + ' · ' + user.email + (user.systemRole === 'root_admin' ? ' · administrator' : '') + (user.mustChangePassword ? ' · password change required' : '') + (user.disabledAt ? ' · disabled' : ''));
   }
   bindForm('adminUserForm', async (values) => { const result = await api('/api/admin/users', 'POST', values); $('adminUserResult').textContent = result.user.email + ' created. Share the temporary password securely; it must be changed at first login.'; await adminUsers(); });
+  bindForm('languageForm', async (values) => { const result = await api('/api/settings/language', 'POST', values); applyLanguage(result.language); status('Language saved.', true); });
   bindForm('reauthForm', async (values) => { await api('/api/auth/reauthenticate', 'POST', values); status('Identity confirmed. You can now change sign-in methods.', true); });
   $('startMfaButton').addEventListener('click', () => perform(async () => {
     const result = await api('/api/settings/mfa/setup', 'POST', {});

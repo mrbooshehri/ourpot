@@ -61,4 +61,12 @@ describe('household ledger', () => {
     const account = ledger.createAccount(owner, 'Checking', 'checking', 0);
     expect(() => ledger.createExpense(outsider, account.id, 100, 'Intrusion', 'Other')).toThrow('Household access denied');
   });
+
+  it('requires unique account names within one household', () => {
+    const ledger = new LedgerService();
+    ledger.createAccount(owner, 'Checking', 'checking', 0);
+    expect(() => ledger.createAccount(member, ' checking ', 'savings', 0)).toThrow('An account with this name already exists');
+    expect(() => ledger.createAccount(owner, 'CHECKING', 'savings', 0)).toThrow('An account with this name already exists');
+    expect(() => ledger.createAccount({ ...owner, householdId: 'h2' }, 'Checking', 'savings', 0)).not.toThrow();
+  });
 });

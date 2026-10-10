@@ -1,7 +1,7 @@
 # Couples’ Household Money Planning App — MVP Product Specification
 
 **Status:** Approved direction; MVP decisions below are resolved for planning.  
-**Implementation:** In progress; the current HTTP app still uses demo identities and in-memory state.
+**Implementation:** In progress; authentication and household membership are persisted, while financial planning services remain in-memory pending their approved repository work.
 
 ## 1. Product goal
 
@@ -15,12 +15,15 @@ These decisions are intentionally limited to behavior required to implement the 
 
 - A household has at most two active members. It may have only the owner until the invited partner joins. A user belongs to one active household.
 - Accounts may be shared or personal, but both partners can view every account and every transaction. Personal-account ownership does not hide the account from the other partner.
+- Household members have a display name for shared totals, activity, and assignments; email is the fallback until a display name is set.
+- Account names are unique within a household, ignoring surrounding whitespace and letter case, so each account has a clear identifying label.
 - The creator is the owner; the invited partner is a member. Only the owner manages invitations and household membership. Both members can create, edit, archive, and soft-delete shared financial records; every mutation is audited.
 - Reports show household totals plus two separate per-partner views: totals paid by each partner and totals entered by each partner. Neither view represents ownership, reimbursement, or a debt calculation.
 - Transactions record both the partner who entered them and the partner who paid them when a payer applies.
 - The household has one currency selected at creation. All accounts use it. Currency conversion is out of scope.
 - Amounts are positive integer minor units. Transaction type carries meaning; negative money values are not accepted.
 - Account balances are derived from opening balance plus non-deleted movements. Negative balances are allowed and clearly marked. Reconciliation is deferred; an explicit adjustment transaction is the correction mechanism.
+- An opening balance is the starting balance already held in an account. It increases the account balance but is not counted as household income. Household income totals include income transactions only.
 - Budgets are monthly calendar periods using the household IANA timezone. Discussion uses proposals, comments, and a status field; it is not real-time chat. Agreement requires approval from both members. An agreed budget change creates a new revision.
 - Wishes and savings goals are separate. Wishes describe desired purchases or experiences. Goals have a target amount and optional deadline; a wish may later be converted into a goal.
 - Goal contributions are standalone manual records. They are not automatically linked to transactions.
@@ -33,6 +36,7 @@ These decisions are intentionally limited to behavior required to implement the 
 - Sign-in creates a revocable, cookie-backed session. Settings shows each partner their own active sessions and lets them revoke any of them, including the current session.
 - Upcoming reminders and audit activity appear on the shared dashboard. Audit history is retained for 12 months. Export is deferred.
 - MVP is a responsive, mobile-friendly web app. Flutter Android/iOS apps are deferred and are not part of MVP.
+- Each user can choose English, Persian, or Arabic in Settings. English uses left-to-right layout; Persian and Arabic use right-to-left layout.
 
 ## 3. Users and household access
 

@@ -5,6 +5,7 @@ import { assertOwner } from '../../shared/household-context';
 import { normalizeEmail } from '../identity/password';
 
 export type PersistedHouseholdView = { id: string; name: string; currency: string; timezone: string };
+export type HouseholdMemberView = { userId: string; displayName: string };
 export type PersistedInvitationView = { token: string; householdId: string; email: string; createdAt: Date; expiresAt: Date };
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
@@ -40,6 +41,18 @@ export class PostgresHouseholdService {
     );
     const row = result.rows[0];
     return row ? { userId, householdId: row.household_id, role: row.role } : null;
+  }
+
+  async listMembers(context: HouseholdContext): Promise<HouseholdMemberView[]> {
+    const result = await this.db.query<{ user_id: string; email: string; display_name: string | null }>(
+      `SELECT u.id AS user_id, u.email, u.display_name
+       FROM household_members hm
+       JOIN users u ON u.id = hm.user_id
+       WHERE hm.household_id = $1 AND hm.active = true
+       ORDER BY hm.joined_at`,
+      [context.householdId],
+    );
+    return result.rows.map((row) => ({ userId: row.user_id, displayName: row.display_name?.trim() || row.email }));
   }
 
   async inviteMember(context: HouseholdContext, email: string): Promise<PersistedInvitationView> {

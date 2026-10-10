@@ -44,9 +44,14 @@ export class LedgerService {
   private readonly audits = new AuditService();
 
   createAccount(context: HouseholdContext, name: string, type: AccountType, openingBalance: number): AccountView {
-    if (!name.trim()) throw new Error('Account name is required');
+    const displayName = name.trim();
+    if (!displayName) throw new Error('Account name is required');
     if (!Number.isSafeInteger(openingBalance) || openingBalance < 0) throw new Error('Opening balance must be a non-negative integer');
-    const account: Account = { id: id('account'), householdId: context.householdId, name: name.trim(), type, balance: openingBalance, archived: false };
+    const normalizedName = displayName.toLocaleLowerCase('en-US');
+    if ([...this.accounts.values()].some((existing) => existing.householdId === context.householdId && existing.name.toLocaleLowerCase('en-US') === normalizedName)) {
+      throw new Error('An account with this name already exists');
+    }
+    const account: Account = { id: id('account'), householdId: context.householdId, name: displayName, type, balance: openingBalance, archived: false };
     this.accounts.set(account.id, account);
     this.audits.record(context, 'account', account.id, 'created', null, account);
     return { ...account };

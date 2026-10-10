@@ -99,8 +99,10 @@ export class ApiApp {
       if (request.method === 'POST' && url.pathname === '/api/admin/users') {
         if (principal.systemRole !== 'root_admin') return json({ error: 'Administrator access required' }, 403);
         const body = await request.json() as Record<string, unknown>;
-        return json({ user: await this.identity.createManagedUser(String(body.email ?? ''), String(body.temporaryPassword ?? '')) }, 201);
+        return json({ user: await this.identity.createManagedUser(String(body.email ?? ''), String(body.temporaryPassword ?? ''), String(body.displayName ?? '')) }, 201);
       }
+      if (request.method === 'GET' && url.pathname === '/api/settings/language') return json({ language: await this.identity.getLanguage(principal.userId) });
+      if (request.method === 'POST' && url.pathname === '/api/settings/language') return json({ language: await this.identity.setLanguage(principal.userId, String((await request.json() as Record<string, unknown>).language ?? '')) });
       if (request.method === 'GET' && url.pathname === '/api/settings/sessions') {
         const sessions = await this.identity.listSessions(principal.userId);
         return json({ sessions: sessions.map((session) => ({ ...session, current: session.id === principal.sessionId })) });
@@ -229,8 +231,21 @@ export class ApiApp {
     return this.households.getContext(userId, membership.householdId);
   }
 
-  private dashboard(context: HouseholdContext): Response {
-    return json({ accounts: this.ledger.listAccounts(context), totals: this.ledger.getTotals(context), audits: this.ledger.getAuditEvents(context) });
+  private async dashboard(context: HouseholdContext): Promise<Response> {
+    const members = await this.households.listMembers(context);
+    const reminders = this.tasksSubscriptions.generateReminders(context, new Date());
+    return json({
+      accounts: this.ledger.listAccounts(context),
+      totals: this.ledger.getTotals(context),
+      audits: this.ledger.getAuditEvents(context),
+      members,
+      budgets: this.planning.listBudgets(context),
+      goals: this.planning.listGoals(context),
+      wishes: this.planning.listWishes(context),
+      tasks: this.tasksSubscriptions.listTasks(context),
+      subscriptions: this.tasksSubscriptions.listSubscriptions(context),
+      reminders,
+    });
   }
 
   private createAccount(context: HouseholdContext, body: Record<string, unknown>): Response {

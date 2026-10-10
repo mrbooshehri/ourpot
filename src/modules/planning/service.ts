@@ -48,6 +48,12 @@ export class PlanningService {
     return this.viewBudget(budget);
   }
 
+  listBudgets(context: HouseholdContext): BudgetView[] {
+    return [...this.budgets.values()]
+      .filter((budget) => budget.householdId === context.householdId)
+      .map((budget) => this.viewBudget(budget));
+  }
+
   createGoal(context: HouseholdContext, name: string, targetAmount: number): GoalView {
     positive(targetAmount);
     if (!name.trim()) throw new Error('Goal name is required');
@@ -71,6 +77,12 @@ export class PlanningService {
     return this.viewGoal(goal);
   }
 
+  listGoals(context: HouseholdContext): GoalView[] {
+    return [...this.goals.values()]
+      .filter((goal) => goal.householdId === context.householdId)
+      .map((goal) => this.viewGoal(goal));
+  }
+
   createWish(context: HouseholdContext, name: string, estimatedCost: number): WishView {
     positive(estimatedCost);
     if (!name.trim()) throw new Error('Wish name is required');
@@ -92,6 +104,12 @@ export class PlanningService {
     const wish = this.wishes.get(wishId);
     if (!wish) throw new Error('Wish not found');
     return { ...wish };
+  }
+
+  listWishes(context: HouseholdContext): WishView[] {
+    return [...this.wishes.values()]
+      .filter((wish) => wish.householdId === context.householdId)
+      .map((wish) => ({ ...wish }));
   }
 
   private requireBudget(context: HouseholdContext, idValue: string): Budget {

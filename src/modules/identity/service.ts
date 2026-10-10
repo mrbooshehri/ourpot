@@ -8,6 +8,7 @@ import * as OTPAuth from 'otpauth';
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from '@simplewebauthn/server';
 import { authenticationOptions, registrationOptions, verifyAuthentication, verifyRegistration } from './passkeys';
 import type { PublicUser, LoginResult, SessionPrincipal, SessionView, SessionIssue, PasskeyView } from './types';
+import type { PreferredLanguage } from './repository';
 
 const tokenHash = (token: string) => createHash('sha256').update(token).digest('hex');
 const DAY = 24 * 60 * 60 * 1000;
@@ -42,14 +43,24 @@ export class IdentityService {
     }
   }
 
-  async createManagedUser(email: string, temporaryPassword: string): Promise<PublicUser> {
-    const user = await this.users.createUser(email, await hashPassword(temporaryPassword), { mustChangePassword: true });
+  async createManagedUser(email: string, temporaryPassword: string, displayName = ''): Promise<PublicUser> {
+    const user = await this.users.createUser(email, await hashPassword(temporaryPassword), { displayName, mustChangePassword: true });
     await this.event(user.id, user.email, 'admin_user_created', 'success');
-    return { id: user.id, email: user.email, systemRole: user.systemRole, mustChangePassword: true };
+    return { id: user.id, email: user.email, displayName: user.displayName, systemRole: user.systemRole, mustChangePassword: true };
   }
 
   async listManagedUsers() {
     return this.users.listUsers();
+  }
+
+  async getLanguage(userId: string): Promise<PreferredLanguage> {
+    return this.users.getLanguage(userId);
+  }
+
+  async setLanguage(userId: string, language: string): Promise<PreferredLanguage> {
+    if (language !== 'en' && language !== 'fa' && language !== 'ar') throw new Error('Unsupported language');
+    await this.users.setLanguage(userId, language);
+    return language;
   }
 
   async changePassword(session: SessionPrincipal, currentPassword: string, newPassword: string): Promise<void> {

@@ -28,12 +28,14 @@ Before first startup, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`
 
 ## PostgreSQL
 
-For a new Compose volume, PostgreSQL applies `0001_initial.sql` through `0004_admin_onboarding.sql` automatically. For an existing volume, apply new migrations explicitly:
+For a new Compose volume, PostgreSQL applies `0001_initial.sql` through `0006_user_profile_preferences.sql` automatically. For an existing volume, apply new migrations explicitly:
 
 ```bash
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0002_authentication.sql
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0003_passkey_reauthentication.sql
 docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0004_admin_onboarding.sql
+docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0005_unique_account_names.sql
+docker compose exec -T postgres psql -U ourpot -d ourpot -f /docker-entrypoint-initdb.d/0006_user_profile_preferences.sql
 ```
 
 Set `DATABASE_URL`, `PUBLIC_ORIGIN`, `WEBAUTHN_RP_ID`, and a random 32-byte hex `TOTP_ENCRYPTION_KEY` for deployments. HTTP localhost mode is enabled only by the explicit development setting in Compose.
