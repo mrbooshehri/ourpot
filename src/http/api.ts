@@ -1,3 +1,4 @@
+import { buildHouseholdReport } from '../modules/reports/service';
 import { PostgresHouseholdService } from '../modules/households/postgres-service';
 import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
@@ -206,6 +207,9 @@ export class ApiApp {
       if (request.method === 'POST' && url.pathname === '/api/invitations') {
         const body = await request.json() as Record<string, unknown>;
         return json(await this.households.inviteMember(context, String(body.email ?? '')), 201);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/reports') {
+        return json(buildHouseholdReport(this.ledger, context, { from: url.searchParams.get('from') ?? '', to: url.searchParams.get('to') ?? '' }));
       }
       if (request.method === 'GET' && url.pathname === '/api/dashboard') return this.dashboard(context);
       if (request.method === 'POST' && url.pathname === '/api/accounts') return this.createAccount(context, await request.json());

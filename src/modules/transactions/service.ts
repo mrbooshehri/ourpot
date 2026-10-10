@@ -23,6 +23,7 @@ type Transaction = {
   category?: string;
   enteredBy: string;
   deleted: boolean;
+  transactionDate: string;
 };
 
 export type AccountView = Readonly<Omit<Account, 'balance' | 'archived'> & { balance: number; archived: boolean }>;
@@ -57,19 +58,19 @@ export class LedgerService {
     return { ...account };
   }
 
-  createIncome(context: HouseholdContext, accountId: string, amount: number, description: string, category: string): TransactionView {
-    return this.createMovement(context, accountId, amount, 'income', description, category);
+  createIncome(context: HouseholdContext, accountId: string, amount: number, description: string, category: string, transactionDate?: string): TransactionView {
+    return this.createMovement(context, accountId, amount, 'income', description, category, transactionDate);
   }
 
-  createExpense(context: HouseholdContext, accountId: string, amount: number, description: string, category: string): TransactionView {
-    return this.createMovement(context, accountId, amount, 'expense', description, category);
+  createExpense(context: HouseholdContext, accountId: string, amount: number, description: string, category: string, transactionDate?: string): TransactionView {
+    return this.createMovement(context, accountId, amount, 'expense', description, category, transactionDate);
   }
 
   createAdjustment(context: HouseholdContext, accountId: string, amount: number, description: string): TransactionView {
     return this.createMovement(context, accountId, amount, 'adjustment', description);
   }
 
-  createTransfer(context: HouseholdContext, sourceAccountId: string, destinationAccountId: string, amount: number, description: string): TransferView {
+  createTransfer(context: HouseholdContext, sourceAccountId: string, destinationAccountId: string, amount: number, description: string, transactionDate = new Date().toISOString().slice(0, 10)): TransferView {
     assertPositiveAmount(amount);
     if (sourceAccountId === destinationAccountId) throw new Error('Self-transfer is not allowed');
     const source = this.requireAccount(context, sourceAccountId);
@@ -125,15 +126,19 @@ export class LedgerService {
     return { householdIncome, householdExpense, byEntrant };
   }
 
+  listTransactions(context: HouseholdContext): Array<Readonly<Transaction>> {
+    return [...this.transactions.values()].filter((transaction) => transaction.householdId === context.householdId).map((transaction) => ({ ...transaction }));
+  }
+
   getAuditEvents(context: HouseholdContext): AuditEvent[] {
     return this.audits.list(context.householdId);
   }
 
-  private createMovement(context: HouseholdContext, accountId: string, amount: number, type: Exclude<TransactionType, 'transfer'>, description: string, category?: string): TransactionView {
+  private createMovement(context: HouseholdContext, accountId: string, amount: number, type: Exclude<TransactionType, 'transfer'>, description: string, category?: string, transactionDate = new Date().toISOString().slice(0, 10)): TransactionView {
     assertPositiveAmount(amount);
     const account = this.requireAccount(context, accountId);
     if (account.archived) throw new Error('Archived account cannot receive transactions');
-    const transaction: Transaction = { id: id('transaction'), householdId: context.householdId, accountId, amount, type, description, ...(category ? { category } : {}), enteredBy: context.userId, deleted: false };
+    const transaction: Transaction = { id: id('transaction'), householdId: context.householdId, accountId, amount, type, description, ...(category ? { category } : {}), enteredBy: context.userId, deleted: false, transactionDate };
     const before = { ...account };
     account.balance += this.signedImpact(transaction);
     this.transactions.set(transaction.id, transaction);
