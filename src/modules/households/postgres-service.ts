@@ -6,6 +6,7 @@ import { normalizeEmail } from '../identity/password';
 
 export type PersistedHouseholdView = { id: string; name: string; currency: string; timezone: string };
 export type HouseholdMemberView = { userId: string; displayName: string };
+export type PersistedInvitationDetails = { email: string; householdName: string; expiresAt: Date };
 export type PersistedInvitationView = { token: string; householdId: string; email: string; createdAt: Date; expiresAt: Date };
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
@@ -78,6 +79,18 @@ export class PostgresHouseholdService {
       );
     });
     return { token, householdId: context.householdId, email: normalized, createdAt, expiresAt };
+  }
+
+  async getInvitation(token: string): Promise<PersistedInvitationDetails> {
+    const result = await this.db.query<{ email: string; household_name: string; expires_at: Date; status: string }>(
+      `SELECT i.email, h.name AS household_name, i.expires_at, i.status
+       FROM invitations i JOIN households h ON h.id = i.household_id
+       WHERE i.token = $1`, [hashToken(token)],
+    );
+    const row = result.rows[0];
+    if (!row || row.status !== 'pending') throw new Error('Invitation not found or already used');
+    if (row.expires_at.getTime() <= Date.now()) throw new Error('Invitation expired');
+    return { email: row.email, householdName: row.household_name, expiresAt: row.expires_at };
   }
 
   async acceptInvitation(token: string, userId: string): Promise<void> {

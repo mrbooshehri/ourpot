@@ -53,6 +53,19 @@ export class IdentityService {
     return this.users.listUsers();
   }
 
+  async createInvitedUser(invitationToken: string, password: string, displayName: string, ip = ''): Promise<PublicUser> {
+    if (!displayName.trim()) throw new Error('Display name is required');
+    const keys = [tokenHash(`invitation:${invitationToken}`), ...(ip ? [tokenHash(`invitation-ip:${ip}`)] : [])];
+    await this.assertNotRateLimited(keys);
+    try {
+      const user = await this.users.createInvitedUser(tokenHash(invitationToken), await hashPassword(password), displayName);
+      return { id: user.id, email: user.email, displayName: user.displayName, systemRole: user.systemRole, mustChangePassword: false };
+    } catch (error) {
+      await this.recordFailure(keys);
+      throw error;
+    }
+  }
+
   async getLanguage(userId: string): Promise<PreferredLanguage> {
     return this.users.getLanguage(userId);
   }

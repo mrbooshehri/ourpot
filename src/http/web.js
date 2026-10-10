@@ -90,6 +90,18 @@
     }
   }
 
+  async function prepareInvitation(token) {
+    try {
+      const details = await api('/api/invitations/' + encodeURIComponent(token));
+      $('inviteJoinEmail').value = details.email;
+      $('inviteJoinDescription').textContent = `Create an account to join ${details.householdName}.`;
+      $('inviteSignupForm').elements.token.value = token;
+      show('authPanel'); $('passwordPanel').hidden = true; $('inviteJoinPanel').hidden = false;
+    } catch (error) {
+      status(error.message || 'This invitation is no longer available.');
+    }
+  }
+
   async function dashboard() {
     const data = await api('/api/dashboard');
     $('income').textContent = String(data.totals.householdIncome) + ' minor units';
@@ -205,6 +217,10 @@
   }
 
   bindForm('loginForm', passwordLogin);
+  bindForm('inviteSignupForm', async (values) => {
+    await api('/api/invitations/signup', 'POST', values);
+    await checkAuth(); status('Account created and household joined.', true);
+  });
   bindForm('mfaForm', async (values) => {
     await api('/api/auth/mfa', 'POST', values);
     $('passwordPanel').hidden = false; $('mfaPanel').hidden = true;
@@ -306,5 +322,8 @@
 
   const invite = new URLSearchParams(location.search).get('invite');
   if (invite) $('acceptInviteForm').elements.token.value = invite;
-  perform(checkAuth);
+  perform(async () => {
+    await checkAuth();
+    if (invite && !$('authPanel').hidden) await prepareInvitation(invite);
+  });
 })();

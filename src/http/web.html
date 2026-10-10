@@ -34,6 +34,18 @@
           <button type="button" id="passkeyLoginButton" class="secondary" hidden>Sign in with a passkey</button>
           <p class="hint">Accounts are created by the administrator or through a household invitation.</p>
         </div>
+        <div class="card stack" id="inviteJoinPanel" hidden>
+          <h2>Join your household</h2>
+          <p id="inviteJoinDescription" class="hint">Create your account to join this household.</p>
+          <form id="inviteSignupForm" class="stack">
+            <label>Display name<input name="displayName" autocomplete="name" required></label>
+            <label>Invitation email<input id="inviteJoinEmail" type="email" readonly></label>
+            <label>Password<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+            <input name="token" type="hidden">
+            <button>Create account and join</button>
+          </form>
+          <p class="hint">Already have an account? Sign in first, then accept the invitation from the household setup screen.</p>
+        </div>
         <div class="card stack" id="mfaPanel" hidden>
           <h2>Authenticator code</h2><p>Enter your current six-digit code or a recovery code.</p>
           <form id="mfaForm" class="stack"><label>Code<input name="code" autocomplete="one-time-code" required></label><button>Continue</button></form>

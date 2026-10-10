@@ -21,6 +21,40 @@ export class IdentityRepository {
     return toUser(row);
   }
 
+  async createInvitedUser(invitationTokenHash: string, passwordHash: string, displayName: string): Promise<User> {
+    return this.db.transaction(async (tx) => {
+      const invitation = await tx.query<{ household_id: string; email: string; expires_at: Date; status: string }>(
+        'SELECT household_id, email, expires_at, status FROM invitations WHERE token = $1 FOR UPDATE', [invitationTokenHash],
+      );
+      const invite = invitation.rows[0];
+      if (!invite || invite.status !== 'pending') throw new Error('Invitation not found or already used');
+      if (invite.expires_at.getTime() <= Date.now()) throw new Error('Invitation expired');
+      const existing = await tx.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [invite.email]);
+      if (existing.rows[0]) throw new Error('An account already exists for this invitation email. Sign in first.');
+      const count = await tx.query<{ count: number }>(
+        'SELECT count(*)::int AS count FROM household_members WHERE household_id = $1 AND active = true', [invite.household_id],
+      );
+      if ((count.rows[0]?.count ?? 0) >= 2) throw new Error('Household already has two members');
+      const id = randomUUID();
+      const created = await tx.query<UserRow>(
+        'INSERT INTO users (id, email, display_name, password_hash, system_role, must_change_password) VALUES ($1, $2, $3, $4, \'user\', false) RETURNING id, email, display_name, preferred_language, password_hash, system_role, must_change_password, disabled_at',
+        [id, invite.email, displayName.trim() || null, passwordHash],
+      );
+      await tx.query(
+        "INSERT INTO household_members (household_id, user_id, role, active) VALUES ($1, $2, 'member', true)",
+        [invite.household_id, id],
+      );
+      await tx.query("UPDATE invitations SET status = 'accepted' WHERE token = $1", [invitationTokenHash]);
+      await tx.query(
+        "INSERT INTO security_events (id, user_id, attempted_email, action, outcome) VALUES ($1, $2, $3, 'invitation_accepted', 'success')",
+        [randomUUID(), id, invite.email],
+      );
+      const row = created.rows[0];
+      if (!row) throw new Error('User creation failed');
+      return toUser(row);
+    });
+  }
+
   async findUserByEmail(email: string): Promise<User | null> {
     const normalized = normalizeEmail(email);
     const result = await this.db.query<UserRow>(

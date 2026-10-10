@@ -74,6 +74,18 @@ export class ApiApp {
         response.headers.set('set-cookie', sessionCookie(issue.token, this.config));
         return response;
       }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/invitations/')) {
+        const invitationToken = decodeURIComponent(url.pathname.slice('/api/invitations/'.length));
+        return json(await this.households.getInvitation(invitationToken));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/invitations/signup') {
+        const body = await request.json() as Record<string, unknown>;
+        const user = await this.identity.createInvitedUser(String(body.token ?? ''), String(body.password ?? ''), String(body.displayName ?? ''), clientIp);
+        const issue = await this.identity.issueSession(user.id, request.headers.get('user-agent') ?? '', 'password');
+        const response = json({ kind: 'session', user }, 201);
+        response.headers.set('set-cookie', sessionCookie(issue.token, this.config));
+        return response;
+      }
       const token = sessionToken(request);
       const principal = token ? await this.identity.getSession(token) : null;
       if (!principal) return json({ error: 'Authentication required' }, 401);

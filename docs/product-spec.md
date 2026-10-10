@@ -31,7 +31,7 @@ These decisions are intentionally limited to behavior required to implement the 
 - Subscriptions may be shared or assigned to one partner, and both partners can view them. Subscription cadences are monthly and yearly.
 - Renewal reminders go to both partners by default at 30 days and 7 days before renewal. Personal notification settings are deferred.
 - Refunds are recorded as income with a `Refund` category. Chargebacks and other complex reversals are deferred.
-- Public registration is disabled. The deployment bootstraps one root administrator from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when no root exists; the root must change that password on first login. The root can create users with temporary passwords, and household owners can invite the second partner with a seven-day link. Automatic email delivery is deferred; links are copied and shared manually in MVP.
+- Public registration is disabled. The deployment bootstraps one root administrator from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when no root exists; the root must change that password on first login. The root can create users with temporary passwords. A household owner can invite the second partner with a seven-day link; the invited partner may create an account from that link. Automatic email delivery is deferred; links are copied and shared manually in MVP.
 - Passwords use Argon2id. A partner may optionally enable authenticator-app MFA for password sign-in, with one-use recovery codes. A registered passkey provides an alternative to password sign-in and does not require a separate TOTP code.
 - Sign-in creates a revocable, cookie-backed session. Settings shows each partner their own active sessions and lets them revoke any of them, including the current session.
 - Upcoming reminders and audit activity appear on the shared dashboard. Audit history is retained for 12 months. Export is deferred.
@@ -45,7 +45,7 @@ These decisions are intentionally limited to behavior required to implement the 
 - An unauthenticated user, non-member, or removed member cannot read or mutate household data.
 - The owner can invite the second partner, revoke a pending invitation, and remove the member. The system prevents removing the last owner.
 - Invitations are email-addressed, expire after seven days, and produce audit events for creation, acceptance, revocation, and expiry.
-- The invitation link is shared manually in MVP; outbound email is not provided. The invitation token and matching registered email are required to accept it. Email verification and self-service password reset are deferred.
+- The invitation link is shared manually in MVP; outbound email is not provided. A new partner opens the link, sees the locked invitation email and household name, enters a display name and password, and creates an account while joining the household. Account creation and invitation acceptance are atomic, the token is one-time-use, and the new partner is signed in. An existing user may sign in and accept the same link when their account email matches the invitation. Email verification and self-service password reset are deferred.
 - The app derives identity from the server-side session and checks active household membership on every household read and write. Client-supplied user or household identity headers do not grant access.
 
 ### 3.1 Sign-in and account security

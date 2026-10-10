@@ -152,4 +152,30 @@ describe('authenticated HTTP API', () => {
     expect(updated.status).toBe(200);
     expect(await updated.json()).toEqual({ language: 'fa' });
   });
+
+  it('lets a new partner create credentials from an invitation link', async () => {
+    const db = createDatabaseClient();
+    const app = new ApiApp(db, config);
+    const ownerEmail = `invite-owner-${randomUUID()}@example.com`;
+    const partnerEmail = `invite-partner-${randomUUID()}@example.com`;
+    await seedUser(ownerEmail);
+    const ownerLogin = await app.fetch(post('/api/auth/login', { email: ownerEmail, password: 'correct horse battery staple' }));
+    const ownerCookie = ownerLogin.headers.get('set-cookie')?.split(';')[0] ?? '';
+    await app.fetch(post('/api/households', { name: 'Invite Home', currency: 'USD', timezone: 'UTC' }, ownerCookie));
+    const invitation = await app.fetch(post('/api/invitations', { email: partnerEmail }, ownerCookie));
+    expect(invitation.status).toBe(201);
+    const token = (await invitation.json() as { token: string }).token;
+    const details = await app.fetch(new Request(`${origin}/api/invitations/${encodeURIComponent(token)}`));
+    expect(details.status).toBe(200);
+    expect(await details.json()).toMatchObject({ email: partnerEmail, householdName: 'Invite Home' });
+    const signup = await app.fetch(post('/api/invitations/signup', { token, displayName: 'Partner One', password: 'partner password long enough' }));
+    expect(signup.status).toBe(201);
+    const partnerCookie = signup.headers.get('set-cookie')?.split(';')[0] ?? '';
+    const me = await app.fetch(new Request(`${origin}/api/auth/me`, { headers: { cookie: partnerCookie } }));
+    expect(await me.json()).toMatchObject({ household: { role: 'member' } });
+    const dashboard = await app.fetch(new Request(`${origin}/api/dashboard`, { headers: { cookie: partnerCookie } }));
+    expect((await dashboard.json() as { members: Array<{ displayName: string }> }).members).toContainEqual(expect.objectContaining({ displayName: 'Partner One' }));
+    expect((await app.fetch(new Request(`${origin}/api/invitations/${encodeURIComponent(token)}`))).status).toBe(400);
+    expect((await app.fetch(post('/api/invitations/signup', { token, displayName: 'Again', password: 'another password long enough' }))).status).toBe(400);
+  });
 });
