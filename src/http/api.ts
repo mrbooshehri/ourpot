@@ -1,4 +1,5 @@
 import { buildReportFromData } from '../modules/reports/service';
+import { randomUUID } from 'node:crypto';
 import { PostgresHouseholdService } from '../modules/households/postgres-service';
 import { IdentityService, RateLimitError } from '../modules/identity/service';
 import { LedgerService } from '../modules/transactions/service';
@@ -21,6 +22,7 @@ const json = (body: unknown, status = 200, extraHeaders: Record<string, string> 
 
 export class ApiApp {
   readonly households: PostgresHouseholdService;
+  private readonly db: DatabaseClient;
   readonly identity: IdentityService;
   readonly ledger = new LedgerService();
   readonly postgresLedger: PostgresTransactionService;
@@ -32,6 +34,7 @@ export class ApiApp {
   readonly notifications: NotificationService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
+    this.db = db;
     this.households = new PostgresHouseholdService(db);
     this.identity = new IdentityService(db, config);
     this.rules = new RulesService(db);
@@ -117,6 +120,19 @@ export class ApiApp {
       if (request.method === 'POST' && url.pathname === '/api/auth/change-password') {
         const body = await request.json() as Record<string, unknown>;
         await this.identity.changePassword(principal, String(body.currentPassword ?? ''), String(body.newPassword ?? ''));
+        return json({ ok: true });
+      }
+      if (request.method === 'POST' && url.pathname === '/api/v1/devices') {
+        const body = await request.json() as Record<string, unknown>;
+        const tokenValue = String(body.token ?? '').trim();
+        const platform = String(body.platform ?? '');
+        if (!tokenValue || !['web', 'android', 'ios'].includes(platform)) return json({ error: 'Invalid device token' }, 400);
+        const result = await this.db.query<{ id: string }>('INSERT INTO device_push_tokens (id,user_id,platform,token) VALUES ($1,$2,$3,$4) ON CONFLICT (user_id,token) DO UPDATE SET revoked_at=NULL RETURNING id', [randomUUID(), principal.userId, platform, tokenValue]);
+        return json({ id: result.rows[0]?.id }, 201);
+      }
+      if (request.method === 'DELETE' && url.pathname.startsWith('/api/v1/devices/')) {
+        const id = decodeURIComponent(url.pathname.slice('/api/v1/devices/'.length));
+        await this.db.query('UPDATE device_push_tokens SET revoked_at=now() WHERE id=$1 AND user_id=$2', [id, principal.userId]);
         return json({ ok: true });
       }
       if (request.method === 'GET' && url.pathname === '/api/v1/notifications') {

@@ -21,3 +21,12 @@ CREATE TABLE IF NOT EXISTS notifications (
   UNIQUE (recipient_user_id, dedupe_key)
 );
 CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(recipient_user_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS device_push_tokens (
+  id text PRIMARY KEY,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  platform text NOT NULL CHECK (platform IN ('web', 'android', 'ios')),
+  token text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz,
+  UNIQUE (user_id, token)
+);
