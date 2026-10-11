@@ -236,9 +236,11 @@
     $('balance').textContent = formatAmount(data.accounts.reduce((total, account) => total + account.balance, 0));
     const accounts = $('accountList');
     const carousel = accountOwl();
+    const pagination = $('accountPagination');
     if (carousel && carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
+    if (pagination && !pagination.parentElement) accounts.parentElement.append(pagination);
     accounts.replaceChildren();
-    $('accountPagination').replaceChildren();
+    pagination?.replaceChildren();
     const recentTransactions = $('recentTransactions'); recentTransactions.replaceChildren();
     for (const account of data.accounts.filter((entry) => !entry.archived)) {
       const card = document.createElement('article'); card.className = 'account-card';
