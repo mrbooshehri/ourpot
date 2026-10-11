@@ -23,6 +23,10 @@ describe('HTTP API', () => {
     expect(html).toContain('Combined household');
     expect(html).toContain('Partner activity');
     expect(html).toContain('id="sideNav"');
+    expect(html).toContain('id="collapseNavButton"');
+    expect(html).toContain('id="mobileMenuButton"');
+    expect(html).toContain('id="avatarMenuButton"');
+    expect(html).toContain('id="avatarMenu"');
     expect(html).toContain('id="recentTransactions"');
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');

@@ -18,6 +18,8 @@
   function show(panel) {
     for (const id of ['authPanel', 'passwordChangePanel', 'setupPanel', 'dashboardPanel', 'reportsPanel', 'profilePanel', 'settingsPanel', 'rulesPanel', 'adminPanel']) $(id).hidden = id !== panel;
     $('appNav').hidden = panel === 'authPanel';
+    $('headerActions').hidden = panel === 'authPanel' || panel === 'passwordChangePanel' || panel === 'setupPanel';
+    if (panel === 'authPanel') { $('avatarMenu').hidden = true; $('mobileMenuButton').setAttribute('aria-expanded', 'false'); document.querySelector('.shell').classList.remove('mobile-nav-open'); }
   }
 
   async function api(path, method = 'GET', body) {
@@ -61,11 +63,28 @@
     });
   }
 
+  $('collapseNavButton').addEventListener('click', () => {
+    const shell = document.querySelector('.shell'); const collapsed = shell.classList.toggle('nav-collapsed');
+    $('collapseNavButton').setAttribute('aria-pressed', String(collapsed)); $('collapseNavButton').setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+    localStorage.setItem('ourpot.navCollapsed', String(collapsed));
+  });
+  $('mobileMenuButton').addEventListener('click', () => {
+    const shell = document.querySelector('.shell'); const open = shell.classList.toggle('mobile-nav-open'); $('mobileMenuButton').setAttribute('aria-expanded', String(open));
+  });
+  $('avatarMenuButton').addEventListener('click', () => { const menu = $('avatarMenu'); const open = menu.hidden; menu.hidden = !open; $('avatarMenuButton').setAttribute('aria-expanded', String(open)); });
+  document.addEventListener('click', (event) => { if (!event.target.closest('.avatar-menu-wrap')) { $('avatarMenu').hidden = true; $('avatarMenuButton').setAttribute('aria-expanded', 'false'); } });
+  for (const [buttonId, navId] of [['avatarProfileButton', 'profileNav'], ['avatarSettingsButton', 'settingsNav'], ['avatarRulesButton', 'rulesNav'], ['avatarAdminButton', 'adminNav']]) {
+    $(buttonId).addEventListener('click', () => { $(navId).click(); $('avatarMenu').hidden = true; });
+  }
+  $('avatarLogoutButton').addEventListener('click', () => $('logoutButton').click());
+  if (localStorage.getItem('ourpot.navCollapsed') === 'true') { document.querySelector('.shell').classList.add('nav-collapsed'); $('collapseNavButton').setAttribute('aria-pressed', 'true'); }
+
   async function checkAuth() {
     try {
       const me = await api('/api/auth/me');
       hasHousehold = !!me.household;
       $('adminNav').hidden = me.systemRole !== 'root_admin';
+      $('avatarAdminButton').hidden = me.systemRole !== 'root_admin';
       if (me.mustChangePassword) show('passwordChangePanel');
       else {
         const language = await api('/api/settings/language');
