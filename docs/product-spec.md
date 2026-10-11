@@ -34,7 +34,7 @@ These decisions are intentionally limited to behavior required to implement the 
 - Public registration is disabled. The deployment bootstraps one root administrator from `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` when no root exists; the root must change that password on first login. The root can create users with temporary passwords. A household owner can invite the second partner with a seven-day link; the invited partner may create an account from that link. Automatic email delivery is deferred; links are copied and shared manually in MVP.
 - Passwords use Argon2id. A partner may optionally enable authenticator-app MFA for password sign-in, with one-use recovery codes. A registered passkey provides an alternative to password sign-in and does not require a separate TOTP code.
 - Sign-in creates a revocable, cookie-backed session. Settings shows each partner their own active sessions and lets them revoke any of them, including the current session.
-- Upcoming reminders and audit activity appear on the shared dashboard. Audit history is retained for 12 months. Export is deferred.
+- Upcoming reminders and audit activity appear on the shared dashboard. Audit history is retained for 12 months. Reviewed CSV, OFX, and QIF imports and JSON/CSV export are available in the full product layer.
 - MVP is a responsive, mobile-friendly web app. Flutter Android/iOS apps are deferred and are not part of MVP.
 - Each user can choose English, Persian, or Arabic in Settings. English uses left-to-right layout; Persian and Arabic use right-to-left layout.
 

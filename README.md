@@ -4,7 +4,7 @@ A shared household money planning app for two partners. Both partners can view h
 
 ## Project status
 
-**Implementation in progress. Password sessions, optional authenticator MFA, passkeys, household membership checks, responsive Dashboard, Reports, Profile, Settings, and Rules pages, report calculations, notification-rule persistence, account-name uniqueness, opening-balance reporting, language direction settings, and focused PostgreSQL tests are present. Financial domain modules still need their approved PostgreSQL persistence wiring before the complete money MVP is release-ready.**
+**Implementation in progress toward the full product. The durable web MVP, PostgreSQL ledger/planning, authentication with optional MFA and passkeys, responsive pages, reviewed CSV/OFX/QIF imports, notifications, versioned API, encrypted backups, and Flutter client scaffold are present. Flutter validation still requires a Flutter-enabled machine.**
 
 The MVP decisions required for implementation are resolved in [docs/product-spec.md](docs/product-spec.md). Product extensions and infrastructure choices that are not needed for the first release remain explicitly deferred.
 
@@ -17,6 +17,7 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 - [Implementation plan](docs/superpowers/plans/2026-10-06-household-money-mvp.md) — approved MVP plan; implementation is in progress.
 - [Project instructions](AGENTS.md) — current workflow and non-negotiable technical constraints.
 - [Operations](docs/operations.md) — local run, Docker/PostgreSQL setup, migrations, and remaining release validation.
+- [Release checklist](docs/release-checklist.md) — install, upgrade, backup/restore, security, and client validation gates.
 - [Authentication design](docs/superpowers/specs/2026-10-08-authentication-design.md) — approved behavior for password and passkey sign-in, optional MFA, and active-session management.
 - [Authentication implementation plan](docs/superpowers/plans/2026-10-08-authentication.md) — incremental tests, persistence, API, MFA, passkeys, Settings, and deployment verification.
 - [UI redesign plan](docs/superpowers/plans/2026-10-10-ui-ux-redesign.md) — responsive page navigation, local Tabler icons, reports, rules, and dashboard visualizations.
@@ -33,6 +34,8 @@ The project intentionally uses manual transaction entry for MVP. Bank and card i
 7. One-time required financial tasks with assignee, due date, and completion.
 8. Subscriptions with in-app renewal reminders.
 9. Household-scoped audit history and access checks throughout.
+10. Reviewed CSV, OFX, and QIF imports plus JSON/CSV export.
+11. Encrypted self-hosted backups and readiness checks.
 
 ## Implementation plan
 
