@@ -193,7 +193,7 @@
       const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+';
       const main = document.createElement('span'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
       const total = document.createElement('strong'); total.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); total.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount);
-      row.append(icon, main, total); recentTransactions.append(row);
+      const actions = document.createElement('span'); actions.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.textContent = '✎'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.textContent = '×'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actions.append(edit, remove); row.append(icon, main, total, actions); recentTransactions.append(row);
     }
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
@@ -426,7 +426,7 @@
   bindForm('accountForm', async (values) => { await api('/api/accounts', 'POST', values); closeNewItem(); await dashboard(); status('Account added.', true); });
   bindForm('transactionForm', async (values) => {
     if (values.type === 'transfer') values.sourceAccountId = values.accountId;
-    await api('/api/transactions', 'POST', values);
+    await api(editingRecord ? `/api/transactions/${encodeURIComponent(editingRecord.id)}` : '/api/transactions', editingRecord ? 'PATCH' : 'POST', values);
     closeNewItem(); await dashboard(); status('Transaction recorded.', true);
   });
   $('transactionForm').elements.type.addEventListener('change', (event) => {
