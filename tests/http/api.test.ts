@@ -47,6 +47,9 @@ describe('HTTP API', () => {
     expect(html).toContain('id="accountPrev"');
     expect(html).toContain('id="accountNext"');
     expect(html).toContain('id="goalList"');
+    expect(html).toContain('id="subscriptionCard"');
+    const css = await (await app.fetch(new Request('http://localhost:3000/assets/app.css'))).text();
+    expect(css).toContain('touch-action:pan-x pan-y');
     expect(html).not.toContain('id="status"');
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');
