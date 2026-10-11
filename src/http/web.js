@@ -2,6 +2,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   let hasHousehold = false;
+  let currentImport = null;
 
   function applyLanguage(language) {
     const locale = language === 'fa' || language === 'ar' ? language : 'en';
@@ -131,6 +132,14 @@
         select.append(option);
       }
     }
+    const importAccount = $('importAccount');
+    if (importAccount) {
+      importAccount.replaceChildren();
+      for (const account of data.accounts.filter((entry) => !entry.archived)) {
+        const option = document.createElement('option'); option.value = account.id; option.textContent = account.name; importAccount.append(option);
+      }
+      if (!importAccount.options.length) { const option = document.createElement('option'); option.value = ''; option.textContent = 'There is no account'; option.disabled = true; importAccount.append(option); }
+    }
     $('transactionForm').querySelector('button').disabled = !data.accounts.some((entry) => !entry.archived);
     renderDashboardVisuals(data.report);
     renderPartnerTotals(data, memberNames);
@@ -230,6 +239,42 @@
     for (const row of data.monthly) item(monthly, row.month + ' · income ' + row.income + ' · expenses ' + row.expense + ' · net ' + row.net);
     $('reportStatus').textContent = 'Showing ' + data.range.from + ' through ' + data.range.to + '.';
   }
+
+  function renderImportRows() {
+    const list = $('importRows'); list.replaceChildren();
+    for (const row of currentImport.rows) {
+      const label = `${row.transactionDate} · ${row.type} · ${row.amountMinor} minor units · ${row.description}${row.duplicateOf ? ' · duplicate in file' : ''}`;
+      const decision = row.decision || 'pending';
+      const actions = document.createElement('span');
+      actions.append(button(decision === 'accept' ? 'Accepted' : 'Accept', async () => { await reviewImportRow(row.id, 'accept'); }, decision === 'accept'));
+      actions.append(button(decision === 'skip' ? 'Skipped' : 'Skip', async () => { await reviewImportRow(row.id, 'skip'); }, decision === 'skip'));
+      item(list, label + ' · ' + decision, actions);
+    }
+    const ready = currentImport.rows.every((row) => row.decision === 'accept' || row.decision === 'skip');
+    $('commitImportButton').disabled = !ready;
+    $('importStatus').textContent = ready ? 'Every row has a decision.' : 'Review every row before committing.';
+  }
+  async function reviewImportRow(rowId, decision) {
+    const updated = await api(`/api/v1/imports/${currentImport.id}/rows/${rowId}`, 'PATCH', { decision });
+    const row = currentImport.rows.find((entry) => entry.id === rowId); if (row) row.decision = decision;
+    renderImportRows();
+  }
+  bindForm('importForm', async (values) => {
+    const file = $('importForm').elements.file.files[0];
+    if (!file) throw new Error('Choose a statement file');
+    currentImport = await api('/api/v1/imports', 'POST', { fileName: file.name, content: await file.text(), accountId: values.accountId });
+    $('importReview').hidden = false; renderImportRows(); status('Import preview ready. Review each row.', true);
+  });
+  $('commitImportButton').addEventListener('click', () => perform(async () => {
+    const result = await api(`/api/v1/imports/${currentImport.id}/commit`, 'POST', {});
+    $('importStatus').textContent = `Committed ${result.accepted} transaction(s); skipped ${result.skipped}.`;
+    $('commitImportButton').disabled = true; $('cancelImportButton').disabled = true;
+    await dashboard(); status('Import committed.', true);
+  }));
+  $('cancelImportButton').addEventListener('click', () => perform(async () => {
+    if (currentImport) await api(`/api/v1/imports/${currentImport.id}/cancel`, 'POST', {});
+    currentImport = null; $('importReview').hidden = true; $('importForm').reset(); status('Import cancelled.', true);
+  }));
 
   async function profile() {
     show('profilePanel');

@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS import_batches (id text PRIMARY KEY, household_id text NOT NULL REFERENCES households(id) ON DELETE CASCADE, created_by text NOT NULL REFERENCES users(id), file_name text NOT NULL, account_id text NOT NULL REFERENCES accounts(id), status text NOT NULL CHECK(status IN ('review','committed','cancelled')), created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS import_rows (id text PRIMARY KEY, batch_id text NOT NULL REFERENCES import_batches(id) ON DELETE CASCADE, transaction_date date NOT NULL, amount_minor bigint NOT NULL CHECK(amount_minor>0), type text NOT NULL CHECK(type IN ('income','expense')), description text NOT NULL, fingerprint text NOT NULL, duplicate_of text, decision text NOT NULL DEFAULT 'pending' CHECK(decision IN ('pending','accept','skip')));
+
+ALTER TABLE import_rows DROP CONSTRAINT IF EXISTS import_rows_batch_id_fingerprint_key;

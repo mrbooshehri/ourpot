@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { DatabaseClient } from './client';
 
 export type Migration = Readonly<{ id: string; sql: string }>;
@@ -7,6 +9,10 @@ const trackingSql = `CREATE TABLE IF NOT EXISTS schema_migrations (
   id text PRIMARY KEY,
   applied_at timestamptz NOT NULL DEFAULT now()
 )`;
+
+export function loadMigrationFiles(directory: string, afterId = ''): Migration[] {
+  return readdirSync(directory).filter((name) => /^\d+_[^/]+\.sql$/.test(name)).sort().map((name) => ({ id: name.replace(/\.sql$/, ''), sql: readFileSync(join(directory, name), 'utf8') })).filter((migration) => migration.id > afterId);
+}
 
 export const defaultMigrations: Migration[] = [
   { id: '0008_migration_tracking', sql: 'CREATE TABLE IF NOT EXISTS schema_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());' },

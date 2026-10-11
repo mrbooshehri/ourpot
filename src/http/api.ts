@@ -10,6 +10,7 @@ import { TaskSubscriptionService } from '../modules/tasks-subscriptions';
 import { PostgresTaskSubscriptionService } from '../modules/tasks/postgres-service';
 import { RulesService } from '../modules/rules';
 import { NotificationService } from '../modules/notifications/service';
+import { ImportService } from '../modules/imports/service';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
@@ -32,6 +33,7 @@ export class ApiApp {
   readonly postgresTasks: PostgresTaskSubscriptionService;
   readonly rules: RulesService;
   readonly notifications: NotificationService;
+  readonly imports: ImportService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
     this.db = db;
@@ -39,6 +41,7 @@ export class ApiApp {
     this.identity = new IdentityService(db, config);
     this.rules = new RulesService(db);
     this.notifications = new NotificationService(db);
+    this.imports = new ImportService(db);
     this.postgresLedger = new PostgresTransactionService(db);
     this.postgresPlanning = new PostgresPlanningService(db);
     this.postgresTasks = new PostgresTaskSubscriptionService(db);
@@ -245,6 +248,24 @@ export class ApiApp {
         return json({ ok: true });
       }
       const context = await this.contextFrom(principal.userId);
+      if (request.method === 'POST' && url.pathname === '/api/v1/imports') {
+        const body = await request.json() as Record<string, unknown>;
+        return json(await this.imports.createBatch(context, {
+          fileName: String(body.fileName ?? ''), content: String(body.content ?? ''), accountId: String(body.accountId ?? ''),
+        }), 201);
+      }
+      const importRowRoute = url.pathname.match(/^\/api\/v1\/imports\/([^/]+)\/rows\/([^/]+)$/);
+      if (request.method === 'PATCH' && importRowRoute) {
+        const body = await request.json() as Record<string, unknown>;
+        if (body.decision !== 'accept' && body.decision !== 'skip') throw new Error('Invalid import decision');
+        return json(await this.imports.reviewRow(context, importRowRoute[1]!, importRowRoute[2]!, body.decision));
+      }
+      const importActionRoute = url.pathname.match(/^\/api\/v1\/imports\/([^/]+)\/(commit|cancel)$/);
+      if (request.method === 'POST' && importActionRoute) {
+        if (importActionRoute[2] === 'commit') return json(await this.imports.commitBatch(context, importActionRoute[1]!));
+        await this.imports.cancelBatch(context, importActionRoute[1]!);
+        return json({ ok: true });
+      }
       if (request.method === 'POST' && url.pathname === '/api/invitations') {
         const body = await request.json() as Record<string, unknown>;
         return json(await this.households.inviteMember(context, String(body.email ?? '')), 201);

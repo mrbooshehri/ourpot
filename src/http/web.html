@@ -168,6 +168,11 @@
         <p id="reportStatus" class="hint"></p>
         <div id="reportSummary" class="grid metrics" hidden><div class="card metric-card"><span class="label">Household income</span><strong id="reportIncome" class="metric">0</strong></div><div class="card metric-card"><span class="label">Household expenses</span><strong id="reportExpense" class="metric">0</strong></div><div class="card metric-card"><span class="label">Net change</span><strong id="reportNet" class="metric">0</strong></div></div>
         <div class="grid two"><div class="card"><h2>Expenses by category</h2><ul id="reportCategories" class="compact-list"></ul></div><div class="card"><h2>Monthly activity</h2><ul id="reportMonthly" class="compact-list"></ul></div></div>
+        <section class="card stack" aria-labelledby="importHeading">
+          <div><h2 id="importHeading">Import a statement</h2><p class="hint">Upload CSV, OFX, or QIF, review every row, then commit accepted transactions.</p></div>
+          <form id="importForm" class="report-controls"><label>Account<select name="accountId" id="importAccount" required><option value="">Load accounts from Dashboard</option></select></label><label>Statement file<input name="file" type="file" accept=".csv,.ofx,.qif" required></label><button>Preview import</button></form>
+          <div id="importReview" hidden class="stack inset"><p id="importStatus" class="hint"></p><ul id="importRows" class="compact-list"></ul><div><button type="button" id="commitImportButton" disabled>Commit accepted rows</button><button type="button" id="cancelImportButton" class="secondary">Cancel review</button></div></div>
+        </section>
       </section>
 
       <section id="profilePanel" data-page="profile" hidden class="stack">
