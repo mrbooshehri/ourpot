@@ -109,45 +109,19 @@
         </section>
         <section class="card" data-visual="income-flow" aria-labelledby="dashboard-visuals-heading"><div class="page-heading"><div><h2 id="dashboard-visuals-heading">This month at a glance</h2><p class="subtle">A quick view of household activity.</p></div></div><div class="grid two"><div><h3>Income and expenses</h3><div id="dashboardChart" class="chart-bars" role="img" aria-label="Income and expenses chart"></div><p id="dashboardChartSummary" class="hint"></p></div><div><h3>Expense categories</h3><ul id="dashboardCategoryList" class="compact-list"></ul></div></div></section>
         <section class="card" aria-labelledby="partner-activity-heading">
-          <div class="page-heading"><div><h2 id="partner-activity-heading">Partner activity</h2><p class="subtle">Who entered the income and expenses</p></div></div>
+          <div class="page-heading"><div><h2 id="partner-activity-heading">Partner activity</h2><p class="subtle">Who entered the income and expenses</p></div><button type="button" id="totalsHelpButton" class="icon-button" aria-label="Explain totals"><i class="ti ti-help"></i></button></div>
           <div id="partnerTotals" class="partner-totals"></div>
           <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
         </section>
-        <details id="totalsHelp" class="card totals-help"><summary>How these totals are calculated</summary><p class="hint">Household totals combine both partners. Transfers are excluded from income and expenses because they move money between accounts. Opening balances affect account balance but are not income.</p></details>
-        <div class="grid two dashboard-entry-grid" id="transactionCard">
-          <div class="card" id="accountCards"><h2>Accounts</h2><ul id="accountList" class="account-list"></ul><form id="accountForm" class="stack inset">
-            <label>Name<input name="name" required></label>
-            <label>Type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="cash">Cash</option><option value="credit_card">Credit card</option><option value="loan">Loan</option></select></label>
-            <label>Opening balance (minor units)<input name="openingBalance" type="number" min="0" step="1" value="0" required></label><p class="hint">This sets the starting account balance. It is not counted as income.</p>
-            <button>Add account</button>
-          </form></div>
-          <div class="card"><h2>Record a transaction</h2><form id="transactionForm" class="stack">
-            <label>Account<select name="accountId" id="accounts" required></select></label>
-            <label>Type<select name="type"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option></select></label>
-            <label id="destinationField" hidden>Destination (for transfers)<select name="destinationAccountId" id="destinationAccounts" disabled></select></label>
-            <label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
-            <label>Description<input name="description" required></label>
-            <label>Category<input name="category" value="General"></label>
-            <button>Record transaction</button>
-          </form></div>
-          <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><ul id="recentTransactions" class="transaction-list"></ul></div>
+                <div class="grid two dashboard-entry-grid" id="transactionCard">
+          <div class="card" id="accountCards"><h2>Accounts</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Account</th><th>Balance</th></tr></thead><tbody id="accountList"></tbody></table></div></div>
+          <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Transaction</th><th>Amount</th><th></th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
         </div>
         <div class="grid two dashboard-planning-grid" id="planningCards">
-          <div class="card"><h2>Budget proposal</h2><form id="budgetForm" class="stack">
-            <label>Category<input name="category" required></label><label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
-            <label>Month<input name="period" type="month" required></label><label>Reason<input name="rationale"></label><button>Propose budget</button>
-          </form></div>
-          <div class="card"><h2>Savings goal</h2><form id="goalForm" class="stack">
-            <label>Name<input name="name" required></label><label>Target (minor units)<input name="targetAmount" type="number" min="1" step="1" required></label><button>Create goal</button>
-          </form></div>
-          <div class="card"><h2>Required task</h2><form id="taskForm" class="stack">
-            <label>Task<input name="title" required></label><label>Due date<input name="dueDate" type="date" required></label><button>Add task</button>
-          </form></div>
-          <div class="card"><h2>Subscription</h2><form id="subscriptionForm" class="stack">
-            <label>Name<input name="name" required></label><label>Price (minor units)<input name="price" type="number" min="1" step="1" required></label>
-            <label>Cadence<select name="cadence"><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label>
-            <label>Next renewal<input name="nextRenewalDate" type="date" required></label><button>Add subscription</button>
-          </form></div>
+          <div class="card"><h2>Budget proposals</h2><p class="hint">Use New to propose or discuss a household budget.</p></div>
+          <div class="card"><h2>Savings goals</h2><p class="hint">Track progress toward shared goals.</p></div>
+          <div class="card"><h2>Required tasks</h2><p class="hint">Keep upcoming financial work visible.</p></div>
+          <div class="card"><h2>Subscriptions</h2><p class="hint">Manage recurring costs and renewal reminders.</p></div>
         </div>
         <div class="grid two dashboard-list-grid">
           <div class="card"><h2>Budget proposals</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="budgetList"></tbody></table></div></div>
@@ -159,7 +133,15 @@
           <div class="card"><h2>Invite your partner</h2><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
           <div class="card"><h2>Recent activity</h2><ul id="auditList" class="compact-list"></ul></div>
         </div>
-        <dialog id="newItemModal" class="new-item-modal"><div class="modal-heading"><h2 id="newItemModalTitle">New item</h2><button type="button" id="closeNewItemModal" class="icon-button" aria-label="Close">×</button></div><div id="newItemModalBody"></div></dialog>
+        <div id="formTemplates" hidden>
+          <form id="accountForm" class="stack"><label>Name<input name="name" required></label><label>Type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="cash">Cash</option><option value="credit_card">Credit card</option><option value="loan">Loan</option></select></label><label>Opening balance (minor units)<input name="openingBalance" type="number" min="0" step="1" value="0" required></label><p class="hint">Opening balance is not counted as income.</p><button>Add account</button></form>
+          <form id="transactionForm" class="stack"><label>Account<select name="accountId" id="accounts" required></select></label><label>Type<select name="type"><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option><option value="adjustment">Adjustment</option></select></label><label id="destinationField" hidden>Destination<select name="destinationAccountId" id="destinationAccounts" disabled></select></label><label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label><label>Description<input name="description" required></label><label>Category<input name="category" value="General"></label><button>Record transaction</button></form>
+          <form id="budgetForm" class="stack"><label>Category<input name="category" required></label><label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label><label>Month<input name="period" type="month" required></label><label>Reason<input name="rationale"></label><button>Propose budget</button></form>
+          <form id="goalForm" class="stack"><label>Name<input name="name" required></label><label>Target (minor units)<input name="targetAmount" type="number" min="1" step="1" required></label><button>Create goal</button></form>
+          <form id="taskForm" class="stack"><label>Task<input name="title" required></label><label>Due date<input name="dueDate" type="date" required></label><button>Add task</button></form>
+          <form id="subscriptionForm" class="stack"><label>Name<input name="name" required></label><label>Price (minor units)<input name="price" type="number" min="1" step="1" required></label><label>Cadence<select name="cadence"><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label><label>Next renewal<input name="nextRenewalDate" type="date" required></label><button>Add subscription</button></form>
+        </div>
+        <dialog id="newItemModal" class="new-item-modal"><div class="modal-heading"><h2 id="newItemModalTitle">New item</h2><button type="button" id="closeNewItemModal" class="icon-button" aria-label="Close">×</button></div><div id="newItemModalBody"></div></dialog><dialog id="totalsHelpModal" class="new-item-modal"><div class="modal-heading"><h2>How these totals are calculated</h2><button type="button" id="closeTotalsHelp" class="icon-button" aria-label="Close">×</button></div><p class="hint modal-copy">Household totals combine both partners. Transfers are excluded from income and expenses because they move money between accounts. Opening balances affect account balance but are not income.</p></dialog>
       </section>
 
       <section id="settingsPanel" data-page="settings" hidden class="stack">

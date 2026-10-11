@@ -119,6 +119,8 @@
   $('closeNewItemModal').addEventListener('click', closeNewItem);
   $('newItemModal').addEventListener('cancel', (event) => { event.preventDefault(); closeNewItem(); });
   $('newItemModal').addEventListener('click', (event) => { if (event.target === $('newItemModal')) closeNewItem(); });
+  $('totalsHelpButton').addEventListener('click', () => $('totalsHelpModal').showModal());
+  $('closeTotalsHelp').addEventListener('click', () => $('totalsHelpModal').close());
   const menuIcons = {
     avatarProfileButton: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
     avatarSettingsButton: '<path d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0 -8"/><path d="M3 12h2m14 0h2M12 3v2m0 14v2m6.364 -14.364l-1.414 1.414m-9.9 9.9l-1.414 1.414m0 -12.728l1.414 1.414m9.9 9.9l1.414 1.414"/>',
@@ -183,13 +185,13 @@
     const audits = $('auditList'); audits.replaceChildren();
     const memberNames = Object.fromEntries((data.members || []).map((member) => [member.userId, member.displayName]));
     for (const account of data.accounts) {
-      const row = document.createElement('li');
-      const name = document.createElement('span'); name.textContent = account.name + (account.balance < 0 ? ' · negative' : ''); if (account.balance < 0) name.className = 'negative-balance';
-      const amount = document.createElement('strong'); amount.textContent = formatAmount(account.balance);
+      const row = document.createElement('tr');
+      const name = document.createElement('td'); name.textContent = account.name + (account.balance < 0 ? ' · negative' : ''); if (account.balance < 0) name.className = 'negative-balance';
+      const amount = document.createElement('td'); const amountValue = document.createElement('strong'); amountValue.textContent = formatAmount(account.balance); amount.append(amountValue);
       row.append(name, amount); accounts.append(row);
     }
     for (const transaction of data.transactions || []) {
-      const row = document.createElement('li');
+      const row = document.createElement('tr');
       const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+';
       const main = document.createElement('span'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
       const total = document.createElement('strong'); total.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); total.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount);
