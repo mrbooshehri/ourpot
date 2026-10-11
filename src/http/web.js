@@ -98,29 +98,24 @@
     localStorage.setItem('ourpot.navCollapsed', String(collapsed));
   });
   const accountCarousel = $('accountList');
-  let accountDrag = null;
-  function updateAccountPagination() {
-    const dots = [...$('accountPagination').children];
-    if (!dots.length) return;
-    const step = accountCarousel.clientWidth || 1;
-    const index = Math.min(dots.length - 1, Math.max(0, Math.round(accountCarousel.scrollLeft / step)));
-    dots.forEach((dot, dotIndex) => { dot.classList.toggle('active', dotIndex === index); dot.setAttribute('aria-selected', String(dotIndex === index)); });
+  function accountOwl() { return window.jQuery ? window.jQuery(accountCarousel) : null; }
+  function refreshAccountCarousel() {
+    const carousel = accountOwl();
+    if (!carousel || typeof carousel.owlCarousel !== 'function') return;
+    if (carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
+    carousel.owlCarousel({
+      center: true,
+      loop: false,
+      margin: 18,
+      dots: true,
+      dotsContainer: '#accountPagination',
+      nav: false,
+      mouseDrag: true,
+      touchDrag: true,
+      pullDrag: true,
+      responsive: { 0: { items: 1 }, 760: { items: 2 } },
+    });
   }
-  accountCarousel.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('button')) return;
-    accountDrag = { x: event.clientX, scrollLeft: accountCarousel.scrollLeft, pointerId: event.pointerId };
-    accountCarousel.setPointerCapture(event.pointerId);
-    accountCarousel.classList.add('is-dragging');
-  });
-  accountCarousel.addEventListener('pointermove', (event) => {
-    if (!accountDrag) return;
-    accountCarousel.scrollLeft = accountDrag.scrollLeft - (event.clientX - accountDrag.x);
-  });
-  const stopAccountDrag = () => { accountDrag = null; accountCarousel.classList.remove('is-dragging'); };
-  accountCarousel.addEventListener('pointerup', stopAccountDrag);
-  accountCarousel.addEventListener('pointercancel', stopAccountDrag);
-  accountCarousel.addEventListener('scroll', updateAccountPagination, { passive: true });
-  window.addEventListener('resize', updateAccountPagination);
   $('mobileMenuButton').addEventListener('click', () => {
     const shell = document.querySelector('.shell'); const open = shell.classList.toggle('mobile-nav-open'); $('mobileMenuButton').setAttribute('aria-expanded', String(open)); $('mobileMenuButton').setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation'); $('navBackdrop').hidden = !open;
   });
@@ -239,7 +234,11 @@
     $('expense').textContent = formatAmount(data.totals.householdExpense);
     $('netChange').textContent = formatAmount(data.totals.householdIncome - data.totals.householdExpense);
     $('balance').textContent = formatAmount(data.accounts.reduce((total, account) => total + account.balance, 0));
-    const accounts = $('accountList'); accounts.replaceChildren();
+    const accounts = $('accountList');
+    const carousel = accountOwl();
+    if (carousel && carousel.hasClass('owl-loaded')) carousel.trigger('destroy.owl.carousel');
+    accounts.replaceChildren();
+    $('accountPagination').replaceChildren();
     const recentTransactions = $('recentTransactions'); recentTransactions.replaceChildren();
     for (const account of data.accounts.filter((entry) => !entry.archived)) {
       const card = document.createElement('article'); card.className = 'account-card';
@@ -252,9 +251,7 @@
       const actions = document.createElement('div'); actions.className = 'account-card-actions'; actions.append(edit, remove); card.append(icon, title, balance, meta, actions); accounts.append(card);
     }
     const add = document.createElement('button'); add.type = 'button'; add.className = 'account-card account-card-add'; add.innerHTML = '<i class="ti ti-plus"></i><span>Add account</span>'; add.onclick = () => openNewItem('accountForm', 'New account'); accounts.append(add);
-    const pagination = $('accountPagination'); pagination.replaceChildren();
-    [...accounts.children].forEach((card, index) => { const dot = document.createElement('button'); dot.type = 'button'; dot.className = 'account-dot'; dot.setAttribute('role', 'tab'); dot.setAttribute('aria-label', `Show account card ${index + 1}`); dot.setAttribute('aria-selected', String(index === 0)); dot.onclick = () => card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); pagination.append(dot); });
-    updateAccountPagination();
+    refreshAccountCarousel();
     for (const transaction of data.transactions || []) {
       const row = document.createElement('tr');
       row.className = `transaction-row-${transaction.type}`;

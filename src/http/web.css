@@ -96,3 +96,13 @@ body:has(#appNav:not([hidden])){background:#eef0f7;color:#191b24}
 .account-dot{inline-size:8px;block-size:8px;min-block-size:8px;padding:0;border-radius:50%;background:#cdd5e8;transition:transform .2s ease,background .2s ease}
 .account-dot.active{background:#3d67c2;transform:scale(1.35)}
 @media(max-width:760px){.account-carousel .account-card{flex-basis:82vw;min-block-size:176px}.account-carousel{padding-inline:8px;margin-inline:-8px}}
+
+/* OwlCarousel2 center mode for the shared account strip. */
+.account-carousel.owl-carousel{display:block;overflow:visible}
+.account-carousel.owl-carousel .owl-stage-outer{overflow:hidden;padding-block:8px 16px;margin-block:-8px -16px}
+.account-carousel.owl-carousel .owl-item{display:flex;justify-content:center}
+.account-carousel.owl-carousel .account-card{inline-size:100%;flex-basis:auto}
+.account-carousel.owl-carousel .owl-dots{display:none}
+.account-pagination{display:flex;justify-content:center;align-items:center;gap:7px;padding-block:2px 4px}
+.account-pagination .owl-dot{inline-size:8px;block-size:8px;min-block-size:8px;padding:0;border:0;border-radius:50%;background:#cdd5e8;transition:transform .2s ease,background .2s ease}
+.account-pagination .owl-dot.active{background:#3d67c2;transform:scale(1.35)}

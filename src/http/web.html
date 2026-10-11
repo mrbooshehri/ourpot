@@ -6,7 +6,10 @@
   <title>Ourpot · Household money</title>
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
   <script src="/assets/passkeys.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js" defer></script>
   <script src="/assets/chart.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </head>
@@ -123,7 +126,7 @@
           <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
         </section>
         <div class="grid two dashboard-entry-grid" id="accountGoalRow">
-          <div class="card" id="accountCards"><div class="page-heading"><h2>Accounts</h2><button type="button" class="section-add-button" data-new-target="accountForm" data-new-title="New account" aria-label="Add account" title="Add account"><i class="ti ti-plus"></i></button></div><div class="account-carousel-shell"><div id="accountList" class="account-carousel"></div><div id="accountPagination" class="account-pagination" role="tablist" aria-label="Account cards"></div></div></div>
+          <div class="card" id="accountCards"><div class="page-heading"><h2>Accounts</h2><button type="button" class="section-add-button" data-new-target="accountForm" data-new-title="New account" aria-label="Add account" title="Add account"><i class="ti ti-plus"></i></button></div><div class="account-carousel-shell"><div id="accountList" class="owl-carousel account-carousel"></div><div id="accountPagination" class="account-pagination" role="tablist" aria-label="Account cards"></div></div></div>
           <div class="card"><div class="page-heading"><h2>Savings goals</h2><button type="button" class="section-add-button" data-new-target="goalForm" data-new-title="New savings goal" aria-label="Add savings goal" title="Add savings goal"><i class="ti ti-plus"></i></button></div><div id="goalList" class="goal-card-stack"></div></div>
         </div>
         <div class="transaction-row" id="transactionCard">

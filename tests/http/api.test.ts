@@ -45,6 +45,8 @@ describe('HTTP API', () => {
     expect(html).toContain('id="confirmActionModal"');
     expect(html).toContain('id="confirmActionButton"');
     expect(html).toContain('id="accountPagination"');
+    expect(html).toContain('owl.carousel.min.js');
+    expect(html).toContain('class="owl-carousel account-carousel"');
     expect(html).not.toContain('id="accountPrev"');
     expect(html).not.toContain('id="accountNext"');
     expect(html).toContain('id="goalList"');
