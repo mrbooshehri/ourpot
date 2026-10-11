@@ -50,6 +50,8 @@ describe('HTTP API', () => {
     expect(html).toContain('id="subscriptionCard"');
     expect(html).toContain('id="goalContributionForm"');
     expect(html).toContain('data-new-target="goalForm"');
+    expect(html).toContain('data-new-title="New savings goal"');
+    expect(html).not.toContain('class="eyebrow"');
     const css = await (await app.fetch(new Request('http://localhost:3000/assets/app.css'))).text();
     expect(css).toContain('touch-action:pan-x pan-y');
     expect(html).not.toContain('id="status"');

@@ -151,7 +151,7 @@
   for (const choice of document.querySelectorAll('[data-new-target]')) {
     choice.addEventListener('click', () => {
       closeNewMenu();
-      openNewItem(choice.dataset.newTarget, choice.textContent);
+      openNewItem(choice.dataset.newTarget, choice.dataset.newTitle || choice.textContent.trim());
     });
   }
   document.addEventListener('click', (event) => {
