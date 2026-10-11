@@ -303,6 +303,14 @@ export class ApiApp {
         if (request.method === 'PATCH') return json(await this.postgresLedger.updateTransaction(context, transactionId, await request.json()));
         if (request.method === 'DELETE') { await this.postgresLedger.deleteTransaction(context, transactionId); return json({ ok: true }); }
       }
+      const planningDelete = url.pathname.match(/^\/api\/(budgets|goals|tasks|subscriptions)\/([^/]+)$/);
+      if (planningDelete && request.method === 'DELETE') {
+        const key = planningDelete[1] as 'budgets' | 'goals' | 'tasks' | 'subscriptions';
+        const table = ({ budgets: 'budget_proposals', goals: 'savings_goals', tasks: 'financial_tasks', subscriptions: 'subscriptions' } as const)[key];
+        const result = await this.db.query(`DELETE FROM ${table} WHERE id=$1 AND household_id=$2 RETURNING id`, [decodeURIComponent(planningDelete[2]!), context.householdId]);
+        if (!result.rows[0]) return json({ error: 'Record not found' }, 404);
+        return json({ ok: true });
+      }
       if (request.method === 'POST' && url.pathname === '/api/budgets') return this.proposeBudget(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/budgets/discuss') return this.discussBudget(context, await request.json());
       if (request.method === 'POST' && url.pathname === '/api/budgets/agree') return this.agreeBudget(context, await request.json());

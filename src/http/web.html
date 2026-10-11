@@ -150,15 +150,16 @@
           </form></div>
         </div>
         <div class="grid two dashboard-list-grid">
-          <div class="card"><h2>Budget proposals</h2><ul id="budgetList" class="compact-list"></ul></div>
-          <div class="card"><h2>Savings goals</h2><ul id="goalList" class="compact-list"></ul></div>
-          <div class="card"><h2>Required tasks</h2><ul id="taskList" class="compact-list"></ul></div>
-          <div class="card"><h2>Subscriptions and reminders</h2><ul id="subscriptionList" class="compact-list"></ul><ul id="reminderList" class="compact-list"></ul></div>
+          <div class="card"><h2>Budget proposals</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="budgetList"></tbody></table></div></div>
+          <div class="card"><h2>Savings goals</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Goal</th><th>Progress</th><th>Status</th><th></th></tr></thead><tbody id="goalList"></tbody></table></div></div>
+          <div class="card"><h2>Required tasks</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Task</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="taskList"></tbody></table></div></div>
+          <div class="card"><h2>Subscriptions and reminders</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Subscription</th><th>Price</th><th>Renews</th><th></th></tr></thead><tbody id="subscriptionList"></tbody></table></div><ul id="reminderList" class="compact-list"></ul></div>
         </div>
         <div class="grid two">
           <div class="card"><h2>Invite your partner</h2><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
           <div class="card"><h2>Recent activity</h2><ul id="auditList" class="compact-list"></ul></div>
         </div>
+        <dialog id="newItemModal" class="new-item-modal"><div class="modal-heading"><h2 id="newItemModalTitle">New item</h2><button type="button" id="closeNewItemModal" class="icon-button" aria-label="Close">×</button></div><div id="newItemModalBody"></div></dialog>
       </section>
 
       <section id="settingsPanel" data-page="settings" hidden class="stack">

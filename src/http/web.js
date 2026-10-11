@@ -88,20 +88,35 @@
     $('newItemMenu').hidden = true;
     $('newDashboardButton').setAttribute('aria-expanded', 'false');
   }
+  let modalFormOrigin = null;
+  function openNewItem(targetId, title) {
+    const target = $(targetId); const modal = $('newItemModal');
+    modalFormOrigin = { target, parent: target.parentElement, next: target.nextSibling };
+    $('newItemModalTitle').textContent = title;
+    $('newItemModalBody').append(target);
+    modal.showModal();
+    const firstField = target.querySelector('input, select, textarea');
+    if (firstField) window.setTimeout(() => firstField.focus(), 50);
+  }
+  function closeNewItem() {
+    const modal = $('newItemModal');
+    if (modal.open) modal.close();
+    if (modalFormOrigin) { modalFormOrigin.parent.insertBefore(modalFormOrigin.target, modalFormOrigin.next); modalFormOrigin = null; }
+  }
   $('newDashboardButton').addEventListener('click', toggleNewMenu);
   $('mobileNewFab').addEventListener('click', toggleNewMenu);
   for (const choice of document.querySelectorAll('[data-new-target]')) {
     choice.addEventListener('click', () => {
-      const target = $(choice.dataset.newTarget);
       closeNewMenu();
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      const firstField = target.querySelector('input, select, textarea');
-      if (firstField) window.setTimeout(() => firstField.focus(), 250);
+      openNewItem(choice.dataset.newTarget, choice.textContent);
     });
   }
   document.addEventListener('click', (event) => {
     if (!event.target.closest('.dashboard-actions') && !event.target.closest('#mobileNewFab')) closeNewMenu();
   });
+  $('closeNewItemModal').addEventListener('click', closeNewItem);
+  $('newItemModal').addEventListener('cancel', (event) => { event.preventDefault(); closeNewItem(); });
+  $('newItemModal').addEventListener('click', (event) => { if (event.target === $('newItemModal')) closeNewItem(); });
   const menuIcons = {
     avatarProfileButton: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
     avatarSettingsButton: '<path d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0 -8"/><path d="M3 12h2m14 0h2M12 3v2m0 14v2m6.364 -14.364l-1.414 1.414m-9.9 9.9l-1.414 1.414m0 -12.728l1.414 1.414m9.9 9.9l1.414 1.414"/>',
@@ -256,16 +271,17 @@
 
   function renderPlanning(data, memberNames) {
     const budgets = $('budgetList'); budgets.replaceChildren();
-    for (const budget of data.budgets || []) item(budgets, `${budget.category} · ${budget.amount} · ${budget.period} · ${budget.status} · proposed by ${memberNames[budget.proposerId] || 'Household member'}`);
+    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const goal of data.goals || []) item(goals, `${goal.name} · ${goal.contributedAmount}/${goal.targetAmount} · ${goal.status}`);
+    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
     const tasks = $('taskList'); tasks.replaceChildren();
-    for (const task of data.tasks || []) item(tasks, `${task.title} · due ${task.dueDate} · assigned to ${memberNames[task.assigneeId] || 'Household member'} · ${task.status}`);
+    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
-    for (const subscription of data.subscriptions || []) item(subscriptions, `${subscription.name} · ${subscription.price} · renews ${subscription.nextRenewalDate}`);
+    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
     const reminders = $('reminderList'); reminders.replaceChildren();
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
+  async function removePlanning(type, id) { if (!window.confirm('Remove this record?')) return; await api(`/api/${type}s/${encodeURIComponent(id)}`, 'DELETE'); await dashboard(); status('Record removed.', true); }
 
   async function rules() {
     show('rulesPanel');
@@ -405,11 +421,11 @@
     $('inviteLink').textContent = 'Share this link privately with your partner: ' + location.origin + '/?invite=' + encodeURIComponent(invitation.token);
     status('Invitation created. It expires in seven days.', true);
   });
-  bindForm('accountForm', async (values) => { await api('/api/accounts', 'POST', values); await dashboard(); status('Account added.', true); });
+  bindForm('accountForm', async (values) => { await api('/api/accounts', 'POST', values); closeNewItem(); await dashboard(); status('Account added.', true); });
   bindForm('transactionForm', async (values) => {
     if (values.type === 'transfer') values.sourceAccountId = values.accountId;
     await api('/api/transactions', 'POST', values);
-    await dashboard(); status('Transaction recorded.', true);
+    closeNewItem(); await dashboard(); status('Transaction recorded.', true);
   });
   $('transactionForm').elements.type.addEventListener('change', (event) => {
     const transfer = event.currentTarget.value === 'transfer';
@@ -422,7 +438,7 @@
     ['goalForm', '/api/goals', 'Goal created.'],
     ['taskForm', '/api/tasks', 'Task created.'],
     ['subscriptionForm', '/api/subscriptions', 'Subscription added.'],
-  ]) bindForm(id, async (values) => { await api(path, 'POST', values); await dashboard(); status(success, true); });
+  ]) bindForm(id, async (values) => { await api(path, 'POST', values); closeNewItem(); await dashboard(); status(success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
   $('reportsNav').addEventListener('click', () => perform(reports));
