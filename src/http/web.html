@@ -96,7 +96,8 @@
       </section>
 
       <section id="dashboardPanel" data-page="dashboard" hidden class="stack">
-        <div class="page-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div></div>
+        <div class="page-heading dashboard-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div><div class="dashboard-actions"><button type="button" id="newDashboardButton" class="new-dashboard-button" aria-expanded="false"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button><div id="newItemMenu" class="new-item-menu" hidden role="menu"><button type="button" data-new-target="accountForm" role="menuitem">Account</button><button type="button" data-new-target="transactionForm" role="menuitem">Transaction</button><button type="button" data-new-target="budgetForm" role="menuitem">Budget proposal</button><button type="button" data-new-target="goalForm" role="menuitem">Savings goal</button><button type="button" data-new-target="taskForm" role="menuitem">Required task</button><button type="button" data-new-target="subscriptionForm" role="menuitem">Subscription</button></div></div></div>
+        <button type="button" id="mobileNewFab" class="mobile-new-fab" aria-label="Create new item"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
         <section class="card overview" aria-labelledby="combined-household-heading">
           <div class="page-heading"><div><h2 id="combined-household-heading">Combined household</h2><p class="subtle">Both partners together</p></div></div>
           <div class="grid metrics">
@@ -113,7 +114,7 @@
           <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
         </section>
         <details id="totalsHelp" class="card totals-help"><summary>How these totals are calculated</summary><p class="hint">Household totals combine both partners. Transfers are excluded from income and expenses because they move money between accounts. Opening balances affect account balance but are not income.</p></details>
-        <div class="grid two">
+        <div class="grid two dashboard-entry-grid" id="transactionCard">
           <div class="card" id="accountCards"><h2>Accounts</h2><ul id="accountList" class="account-list"></ul><form id="accountForm" class="stack inset">
             <label>Name<input name="name" required></label>
             <label>Type<select name="type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="cash">Cash</option><option value="credit_card">Credit card</option><option value="loan">Loan</option></select></label>
@@ -131,7 +132,7 @@
           </form></div>
           <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><ul id="recentTransactions" class="transaction-list"></ul></div>
         </div>
-        <div class="grid two">
+        <div class="grid two dashboard-planning-grid" id="planningCards">
           <div class="card"><h2>Budget proposal</h2><form id="budgetForm" class="stack">
             <label>Category<input name="category" required></label><label>Amount (minor units)<input name="amount" type="number" min="1" step="1" required></label>
             <label>Month<input name="period" type="month" required></label><label>Reason<input name="rationale"></label><button>Propose budget</button>
@@ -148,8 +149,8 @@
             <label>Next renewal<input name="nextRenewalDate" type="date" required></label><button>Add subscription</button>
           </form></div>
         </div>
-        <div class="grid two">
-          <div class="card"><h2>Budgets</h2><ul id="budgetList" class="compact-list"></ul></div>
+        <div class="grid two dashboard-list-grid">
+          <div class="card"><h2>Budget proposals</h2><ul id="budgetList" class="compact-list"></ul></div>
           <div class="card"><h2>Savings goals</h2><ul id="goalList" class="compact-list"></ul></div>
           <div class="card"><h2>Required tasks</h2><ul id="taskList" class="compact-list"></ul></div>
           <div class="card"><h2>Subscriptions and reminders</h2><ul id="subscriptionList" class="compact-list"></ul><ul id="reminderList" class="compact-list"></ul></div>

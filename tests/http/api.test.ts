@@ -27,6 +27,11 @@ describe('HTTP API', () => {
     expect(html).toContain('id="mobileMenuButton"');
     expect(html).toContain('id="avatarMenuButton"');
     expect(html).toContain('id="avatarMenu"');
+    expect(html).toContain('id="newDashboardButton"');
+    expect(html).toContain('id="mobileNewFab"');
+    expect(html).toContain('id="newItemMenu"');
+    expect(html).toContain('id="transactionCard"');
+    expect(html).toContain('id="planningCards"');
     expect((await app.fetch(new Request('http://localhost:3000/assets/logo.svg'))).status).toBe(200);
     expect(html).toContain('id="recentTransactions"');
     expect(html).toContain('id="accountCards"');

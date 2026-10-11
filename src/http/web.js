@@ -78,6 +78,30 @@
     $(buttonId).addEventListener('click', () => { $(navId).click(); $('avatarMenu').hidden = true; });
   }
   $('avatarLogoutButton').addEventListener('click', () => $('logoutButton').click());
+  function toggleNewMenu() {
+    const menu = $('newItemMenu');
+    const open = menu.hidden;
+    menu.hidden = !open;
+    $('newDashboardButton').setAttribute('aria-expanded', String(open));
+  }
+  function closeNewMenu() {
+    $('newItemMenu').hidden = true;
+    $('newDashboardButton').setAttribute('aria-expanded', 'false');
+  }
+  $('newDashboardButton').addEventListener('click', toggleNewMenu);
+  $('mobileNewFab').addEventListener('click', toggleNewMenu);
+  for (const choice of document.querySelectorAll('[data-new-target]')) {
+    choice.addEventListener('click', () => {
+      const target = $(choice.dataset.newTarget);
+      closeNewMenu();
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const firstField = target.querySelector('input, select, textarea');
+      if (firstField) window.setTimeout(() => firstField.focus(), 250);
+    });
+  }
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.dashboard-actions') && !event.target.closest('#mobileNewFab')) closeNewMenu();
+  });
   const menuIcons = {
     avatarProfileButton: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
     avatarSettingsButton: '<path d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0 -8"/><path d="M3 12h2m14 0h2M12 3v2m0 14v2m6.364 -14.364l-1.414 1.414m-9.9 9.9l-1.414 1.414m0 -12.728l1.414 1.414m9.9 9.9l1.414 1.414"/>',
