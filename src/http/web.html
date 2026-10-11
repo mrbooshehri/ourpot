@@ -116,19 +116,15 @@
           <div id="partnerTotals" class="partner-totals"></div>
           <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
         </section>
-                <div class="grid two dashboard-entry-grid" id="transactionCard">
+        <div class="grid two dashboard-entry-grid" id="accountGoalRow">
           <div class="card" id="accountCards"><div class="page-heading"><h2>Accounts</h2><span class="eyebrow">Household accounts</span></div><div id="accountList" class="account-carousel"></div></div>
+          <div class="card"><h2>Savings goals</h2><div id="goalList" class="goal-stack"></div></div>
+        </div>
+        <div class="transaction-row" id="transactionCard">
           <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><div id="transactionChart" class="transaction-chart" role="img" aria-label="Current month transaction trend"></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Transaction</th><th>Amount</th><th></th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
         </div>
-        <div class="grid two dashboard-planning-grid" id="planningCards">
-          <div class="card"><h2>Budget proposals</h2><p class="hint">Use New to propose or discuss a household budget.</p></div>
-          <div class="card"><h2>Savings goals</h2><p class="hint">Track progress toward shared goals.</p></div>
-          <div class="card"><h2>Required tasks</h2><p class="hint">Keep upcoming financial work visible.</p></div>
-          <div class="card"><h2>Subscriptions</h2><p class="hint">Manage recurring costs and renewal reminders.</p></div>
-        </div>
-        <div class="grid two dashboard-list-grid">
+        <div class="grid two dashboard-list-grid" id="planningCards">
           <div class="card"><h2>Budget proposals</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="budgetList"></tbody></table></div></div>
-          <div class="card"><h2>Savings goals</h2><div id="goalList" class="goal-stack"></div></div>
           <div class="card"><h2>Required tasks</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Task</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="taskList"></tbody></table></div></div>
           <div class="card"><h2>Subscriptions and reminders</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Subscription</th><th>Price</th><th>Renews</th><th></th></tr></thead><tbody id="subscriptionList"></tbody></table></div><ul id="reminderList" class="compact-list"></ul></div>
         </div>
@@ -150,7 +146,7 @@
         <div class="page-heading"><div><h1>Settings</h1><p class="subtle">Choose your language and review household preferences.</p></div></div>
         <div class="grid two">
           <div class="card"><h2>Language</h2><p class="hint">English uses left-to-right layout. Persian and Arabic use right-to-left layout.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
-          <div class="card"><h2>Household currency</h2><p class="hint">Choose the three-letter currency used across account cards, transactions, goals, and reports.</p><form id="currencyForm" class="stack"><label>Currency code <i class="ti ti-currency-dollar"></i><input name="currency" maxlength="3" pattern="[A-Za-z]{3}" required></label><label>Timezone<input name="timezone" required></label><button>Save currency</button></form></div>
+          <div class="card"><h2>Household currency</h2><p class="hint">Choose the currency used across account cards, transactions, goals, and reports.</p><form id="currencyForm" class="stack"><label>Currency name<input name="currencyName" placeholder="US Dollar" required></label><label>Short form <i class="ti ti-currency-dollar"></i><input name="currency" maxlength="3" pattern="[A-Za-z]{3}" required></label><label>Currency icon <select name="currencyIcon"><option value="currency-dollar">Dollar</option><option value="currency-euro">Euro</option><option value="currency-pound">Pound</option><option value="coins">Coins</option></select></label><button>Save currency</button></form></div>
           <div class="card" id="inviteSettingsCard"><h2>Invite your partner</h2><p class="hint">Invite the second household member. The invitation link expires after seven days.</p><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
         </div>
       </section>

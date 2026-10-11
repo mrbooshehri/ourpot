@@ -184,10 +184,10 @@
     const data = await api('/api/dashboard');
     householdCurrency = data.currency || 'USD';
     $('inviteRibbon').hidden = data.hasPendingInvitation || localStorage.getItem('ourpot.inviteRibbonDismissed') === 'true';
-    $('income').textContent = String(data.totals.householdIncome) + ' minor units';
-    $('expense').textContent = String(data.totals.householdExpense) + ' minor units';
-    $('netChange').textContent = String(data.totals.householdIncome - data.totals.householdExpense) + ' minor units';
-    $('balance').textContent = String(data.accounts.reduce((total, account) => total + account.balance, 0)) + ' minor units';
+    $('income').textContent = formatAmount(data.totals.householdIncome);
+    $('expense').textContent = formatAmount(data.totals.householdExpense);
+    $('netChange').textContent = formatAmount(data.totals.householdIncome - data.totals.householdExpense);
+    $('balance').textContent = formatAmount(data.accounts.reduce((total, account) => total + account.balance, 0));
     const accounts = $('accountList'); accounts.replaceChildren();
     for (const account of data.accounts.filter((entry) => !entry.archived)) {
       const card = document.createElement('article'); card.className = 'account-card';
@@ -208,6 +208,7 @@
       const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
     }
     const chart = $('transactionChart'); chart.replaceChildren(); const month = new Date().toISOString().slice(0, 7); const monthRows = (data.transactions || []).filter((transaction) => transaction.transactionDate.startsWith(month)); const max = Math.max(...monthRows.map((transaction) => transaction.amount), 1); for (const transaction of monthRows.slice(-10)) { const bar = document.createElement('div'); bar.className = `transaction-bar ${transaction.type}`; bar.style.setProperty('--bar-size', `${Math.max(8, transaction.amount / max * 100)}%`); bar.title = `${transaction.description}: ${formatAmount(transaction.amount)}`; chart.append(bar); }
+    const audits = $('auditList'); audits.replaceChildren();
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
     }
@@ -247,11 +248,11 @@
     else {
       const max = Math.max(report.household.income, report.household.expense, 1);
       for (const [label, value, color] of [['Income', report.household.income, '#1d5b4a'], ['Expenses', report.household.expense, '#a43e45']]) {
-        const row = document.createElement('div'); row.className = 'chart-row'; const name = document.createElement('span'); name.textContent = label; const track = document.createElement('span'); track.className = 'chart-track'; const bar = document.createElement('span'); bar.className = 'chart-bar'; bar.style.inlineSize = (value / max * 100) + '%'; bar.style.backgroundColor = color; track.append(bar); const amount = document.createElement('strong'); amount.textContent = value + ' minor units'; row.append(name, track, amount); chart.append(row);
+        const row = document.createElement('div'); row.className = 'chart-row'; const name = document.createElement('span'); name.textContent = label; const track = document.createElement('span'); track.className = 'chart-track'; const bar = document.createElement('span'); bar.className = 'chart-bar'; bar.style.inlineSize = (value / max * 100) + '%'; bar.style.backgroundColor = color; track.append(bar); const amount = document.createElement('strong'); amount.textContent = formatAmount(value); row.append(name, track, amount); chart.append(row);
       }
-      $('dashboardChartSummary').textContent = 'Net change: ' + report.household.net + ' minor units.';
+      $('dashboardChartSummary').textContent = 'Net change: ' + formatAmount(report.household.net) + '.';
     }
-    const categories = $('dashboardCategoryList'); categories.replaceChildren(); const entries = Object.entries(report?.byCategory || {}); if (!entries.length) item(categories, 'No expenses by category yet.'); for (const [category, amount] of entries) item(categories, category + ' · ' + amount + ' minor units');
+    const categories = $('dashboardCategoryList'); categories.replaceChildren(); const entries = Object.entries(report?.byCategory || {}); if (!entries.length) item(categories, 'No expenses by category yet.'); for (const [category, amount] of entries) item(categories, category + ' · ' + formatAmount(amount));
   }
 
   function renderPartnerTotals(data, memberNames) {
@@ -277,7 +278,7 @@
       for (const [label, value] of [['Income entered', totals.income], ['Expenses entered', totals.expense], ['Net entered', totals.income - totals.expense]]) {
         const row = document.createElement('div');
         const name = document.createElement('span'); name.className = 'label'; name.textContent = label;
-        const amount = document.createElement('strong'); amount.textContent = `${value} minor units`;
+        const amount = document.createElement('strong'); amount.textContent = formatAmount(value);
         row.append(name, amount); values.append(row);
       }
       article.append(values); container.append(article);
@@ -323,13 +324,13 @@
     $('reportStatus').textContent = 'Loading report…';
     const data = await api('/api/reports?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
     $('reportSummary').hidden = false;
-    $('reportIncome').textContent = data.household.income + ' minor units';
-    $('reportExpense').textContent = data.household.expense + ' minor units';
-    $('reportNet').textContent = data.household.net + ' minor units';
+    $('reportIncome').textContent = formatAmount(data.household.income);
+    $('reportExpense').textContent = formatAmount(data.household.expense);
+    $('reportNet').textContent = formatAmount(data.household.net);
     const categories = $('reportCategories'); categories.replaceChildren();
     const categoryEntries = Object.entries(data.byCategory);
     if (!categoryEntries.length) item(categories, 'No expenses in this range.');
-    for (const [category, amount] of categoryEntries) item(categories, category + ' · ' + amount + ' minor units');
+    for (const [category, amount] of categoryEntries) item(categories, category + ' · ' + formatAmount(amount));
     const monthly = $('reportMonthly'); monthly.replaceChildren();
     if (!data.monthly.length) item(monthly, 'No income or expenses in this range.');
     for (const row of data.monthly) item(monthly, row.month + ' · income ' + row.income + ' · expenses ' + row.expense + ' · net ' + row.net);
@@ -339,7 +340,7 @@
   function renderImportRows() {
     const list = $('importRows'); list.replaceChildren();
     for (const row of currentImport.rows) {
-      const label = `${row.transactionDate} · ${row.type} · ${row.amountMinor} minor units · ${row.description}${row.duplicateOf ? ' · duplicate in file' : ''}`;
+      const label = `${row.transactionDate} · ${row.type} · ${formatAmount(row.amountMinor)} · ${row.description}${row.duplicateOf ? ' · duplicate in file' : ''}`;
       const decision = row.decision || 'pending';
       const actions = document.createElement('span');
       actions.append(button(decision === 'accept' ? 'Accepted' : 'Accept', async () => { await reviewImportRow(row.id, 'accept'); }, decision === 'accept'));
@@ -414,7 +415,7 @@
     show('settingsPanel');
     const languageData = await api('/api/settings/language');
     $('languageForm').elements.language.value = languageData.language;
-    const householdData = await api('/api/settings/household'); householdCurrency = householdData.currency || householdCurrency; $('currencyForm').elements.currency.value = householdData.currency || 'USD'; $('currencyForm').elements.timezone.value = householdData.timezone || 'UTC';
+    const householdData = await api('/api/settings/household'); householdCurrency = householdData.currency || householdCurrency; $('currencyForm').elements.currency.value = householdData.currency || 'USD'; $('currencyForm').elements.currencyName.value = householdData.currencyName || ''; $('currencyForm').elements.currencyIcon.value = householdData.currencyIcon || 'currency-dollar';
   }
 
   bindForm('reportForm', async (values) => { await loadReport(values.from, values.to); });
@@ -474,7 +475,7 @@
   }
   bindForm('adminUserForm', async (values) => { const result = await api('/api/admin/users', 'POST', values); $('adminUserResult').textContent = result.user.email + ' created. Share the temporary password securely; it must be changed at first login.'; await adminUsers(); });
   bindForm('languageForm', async (values) => { const result = await api('/api/settings/language', 'POST', values); applyLanguage(result.language); status('Language saved.', true); });
-  bindForm('currencyForm', async (values) => { const result = await api('/api/settings/household', 'PATCH', { currency: values.currency.toUpperCase(), timezone: values.timezone }); householdCurrency = result.currency; status(`Currency saved as ${result.currency}.`, true); await dashboard(); });
+  bindForm('currencyForm', async (values) => { const result = await api('/api/settings/household', 'PATCH', { currency: values.currency.toUpperCase(), currencyName: values.currencyName, currencyIcon: values.currencyIcon }); householdCurrency = result.currency; status(`Currency saved as ${result.currencyName} (${result.currency}).`, true); await dashboard(); });
   bindForm('reauthForm', async (values) => { await api('/api/auth/reauthenticate', 'POST', values); status('Identity confirmed. You can now change sign-in methods.', true); });
   $('startMfaButton').addEventListener('click', () => perform(async () => {
     const result = await api('/api/settings/mfa/setup', 'POST', {});
