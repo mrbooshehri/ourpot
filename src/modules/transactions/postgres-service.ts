@@ -13,7 +13,7 @@ type AccountRow = { id: string; household_id: string; name: string; type: Accoun
 type TransactionRow = { id: string; household_id: string; account_id: string; amount_minor: number; type: 'income'|'expense'|'adjustment'|'transfer'; description: string; category: string | null; entered_by: string; transaction_date: string; deleted_at: Date | null };
 const positive = (value: number) => { if (!Number.isSafeInteger(value) || value <= 0) throw new Error('Amount must be a positive integer'); };
 const dateOnly = (value: string) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('Date must be YYYY-MM-DD'); };
-const accountView = (row: AccountRow): AccountView => ({ id: row.id, householdId: row.household_id, name: row.name, type: row.type, balance: Number(row.balance ?? row.opening_balance), archived: row.archived });
+const accountView = (row: AccountRow): AccountView => ({ id: row.id, householdId: row.household_id, name: row.name, type: row.type, openingBalance: Number(row.opening_balance), balance: Number(row.balance ?? row.opening_balance), archived: row.archived });
 const transactionView = (row: TransactionRow): TransactionView => ({ id: row.id, householdId: row.household_id, accountId: row.account_id, amount: Number(row.amount_minor), type: row.type, description: row.description, ...(row.category ? { category: row.category } : {}), enteredBy: row.entered_by, deleted: !!row.deleted_at, transactionDate: row.transaction_date });
 
 export class PostgresTransactionService {

@@ -175,6 +175,8 @@ export class ApiApp {
       }
       if (request.method === 'GET' && url.pathname === '/api/settings/language') return json({ language: await this.identity.getLanguage(principal.userId) });
       if (request.method === 'POST' && url.pathname === '/api/settings/language') return json({ language: await this.identity.setLanguage(principal.userId, String((await request.json() as Record<string, unknown>).language ?? '')) });
+      if (request.method === 'GET' && url.pathname === '/api/settings/household') { const context = await this.contextFrom(principal.userId); return json((await this.db.query('SELECT name,currency,timezone FROM households WHERE id=$1', [context.householdId])).rows[0]); }
+      if (request.method === 'PATCH' && url.pathname === '/api/settings/household') { const context = await this.contextFrom(principal.userId); const body = await request.json() as Record<string, unknown>; const currency = String(body.currency ?? '').toUpperCase(); if (!/^[A-Z]{3}$/.test(currency)) return json({ error: 'Currency must be a three-letter code' }, 400); const result = await this.db.query('UPDATE households SET currency=$1,timezone=$2 WHERE id=$3 RETURNING name,currency,timezone', [currency, String(body.timezone ?? 'UTC'), context.householdId]); return json(result.rows[0]); }
       if (request.method === 'GET' && url.pathname === '/api/settings/sessions') {
         const sessions = await this.identity.listSessions(principal.userId);
         return json({ sessions: sessions.map((session) => ({ ...session, current: session.id === principal.sessionId })) });
@@ -369,6 +371,7 @@ export class ApiApp {
     const reminders = await this.postgresTasks.generateReminders(context, new Date());
     const transactions = await this.postgresLedger.listTransactions(context);
     const hasPendingInvitation = await this.households.hasPendingInvitation(context);
+    const household = await this.db.query<{ currency: string }>('SELECT currency FROM households WHERE id=$1', [context.householdId]);
     return json({
       report: buildReportFromData(await this.postgresLedger.listTransactions(context), financial.accounts, { from: monthStart, to: today }),
       accounts: financial.accounts,
@@ -383,6 +386,7 @@ export class ApiApp {
       reminders,
       transactions: transactions.filter((transaction) => !transaction.deleted).slice(-12).reverse(),
       hasPendingInvitation,
+      currency: household.rows[0]?.currency ?? 'USD',
     });
   }
 

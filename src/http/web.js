@@ -3,6 +3,7 @@
   const $ = (id) => document.getElementById(id);
   let hasHousehold = false;
   let currentImport = null;
+  let householdCurrency = 'USD';
 
   function applyLanguage(language) {
     const locale = language === 'fa' || language === 'ar' ? language : 'en';
@@ -181,21 +182,24 @@
 
   async function dashboard() {
     const data = await api('/api/dashboard');
+    householdCurrency = data.currency || 'USD';
     $('inviteRibbon').hidden = data.hasPendingInvitation || localStorage.getItem('ourpot.inviteRibbonDismissed') === 'true';
     $('income').textContent = String(data.totals.householdIncome) + ' minor units';
     $('expense').textContent = String(data.totals.householdExpense) + ' minor units';
     $('netChange').textContent = String(data.totals.householdIncome - data.totals.householdExpense) + ' minor units';
     $('balance').textContent = String(data.accounts.reduce((total, account) => total + account.balance, 0)) + ' minor units';
     const accounts = $('accountList'); accounts.replaceChildren();
-    const recentTransactions = $('recentTransactions'); recentTransactions.replaceChildren();
-    const audits = $('auditList'); audits.replaceChildren();
-    const memberNames = Object.fromEntries((data.members || []).map((member) => [member.userId, member.displayName]));
-    for (const account of data.accounts) {
-      const row = document.createElement('tr');
-      const name = document.createElement('td'); name.textContent = account.name + (account.balance < 0 ? ' · negative' : ''); if (account.balance < 0) name.className = 'negative-balance';
-      const amount = document.createElement('td'); const amountValue = document.createElement('strong'); amountValue.textContent = formatAmount(account.balance); amount.append(amountValue);
-      const actions = document.createElement('td'); actions.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit account'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('accountForm', 'Edit account', { id: account.id, name: account.name, type: account.type, openingBalance: account.openingBalance }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove account'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm(`Archive account “${account.name}”? Existing transactions will be kept.`)) return; await api(`/api/accounts/${encodeURIComponent(account.id)}`, 'DELETE'); await dashboard(); status('Account archived.', true); }); actions.append(edit, remove); row.append(name, amount, actions); accounts.append(row);
+    for (const account of data.accounts.filter((entry) => !entry.archived)) {
+      const card = document.createElement('article'); card.className = 'account-card';
+      const icon = document.createElement('span'); icon.className = 'account-card-icon'; icon.innerHTML = '<i class="ti ti-wallet"></i>';
+      const title = document.createElement('strong'); title.textContent = account.name;
+      const balance = document.createElement('b'); balance.className = account.balance < 0 ? 'negative-balance' : ''; balance.textContent = formatAmount(account.balance);
+      const meta = document.createElement('small'); meta.textContent = `${account.type} · opening ${formatAmount(account.openingBalance)}`;
+      const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit account'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('accountForm', 'Edit account', { id: account.id, name: account.name, type: account.type, openingBalance: account.openingBalance });
+      const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove account'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm(`Archive account “${account.name}”? Existing transactions will be kept.`)) return; await api(`/api/accounts/${encodeURIComponent(account.id)}`, 'DELETE'); await dashboard(); status('Account archived.', true); });
+      const actions = document.createElement('div'); actions.className = 'account-card-actions'; actions.append(edit, remove); card.append(icon, title, balance, meta, actions); accounts.append(card);
     }
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'account-card account-card-add'; add.innerHTML = '<i class="ti ti-plus"></i><span>Add account</span>'; add.onclick = () => openNewItem('accountForm', 'New account'); accounts.append(add);
     for (const transaction of data.transactions || []) {
       const row = document.createElement('tr');
       const iconCell = document.createElement('td'); const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+'; iconCell.append(icon);
@@ -203,6 +207,7 @@
       const total = document.createElement('td'); const totalValue = document.createElement('strong'); totalValue.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); totalValue.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount); total.append(totalValue);
       const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
     }
+    const chart = $('transactionChart'); chart.replaceChildren(); const month = new Date().toISOString().slice(0, 7); const monthRows = (data.transactions || []).filter((transaction) => transaction.transactionDate.startsWith(month)); const max = Math.max(...monthRows.map((transaction) => transaction.amount), 1); for (const transaction of monthRows.slice(-10)) { const bar = document.createElement('div'); bar.className = `transaction-bar ${transaction.type}`; bar.style.setProperty('--bar-size', `${Math.max(8, transaction.amount / max * 100)}%`); bar.title = `${transaction.description}: ${formatAmount(transaction.amount)}`; chart.append(bar); }
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
     }
@@ -234,7 +239,7 @@
     renderPlanning(data, memberNames);
   }
 
-  function formatAmount(value) { return Number(value).toLocaleString(document.documentElement.lang || 'en-US') + ' minor units'; }
+  function formatAmount(value) { return new Intl.NumberFormat(document.documentElement.lang || 'en-US', { style: 'currency', currency: householdCurrency, minimumFractionDigits: 2 }).format(Number(value) / 100); }
 
   function renderDashboardVisuals(report) {
     const chart = $('dashboardChart'); chart.replaceChildren();
@@ -283,7 +288,7 @@
     const budgets = $('budgetList'); budgets.replaceChildren();
     for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
+    for (const goal of data.goals || []) { const card = document.createElement('article'); card.className = 'goal-card'; card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><strong>${goal.name}</strong><span>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</span><small>${goal.status}</small><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`; card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(card); } const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML='<i class="ti ti-plus"></i><span>New savings goal</span>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd);
     const tasks = $('taskList'); tasks.replaceChildren();
     for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
@@ -409,6 +414,7 @@
     show('settingsPanel');
     const languageData = await api('/api/settings/language');
     $('languageForm').elements.language.value = languageData.language;
+    const householdData = await api('/api/settings/household'); householdCurrency = householdData.currency || householdCurrency; $('currencyForm').elements.currency.value = householdData.currency || 'USD'; $('currencyForm').elements.timezone.value = householdData.timezone || 'UTC';
   }
 
   bindForm('reportForm', async (values) => { await loadReport(values.from, values.to); });
@@ -468,6 +474,7 @@
   }
   bindForm('adminUserForm', async (values) => { const result = await api('/api/admin/users', 'POST', values); $('adminUserResult').textContent = result.user.email + ' created. Share the temporary password securely; it must be changed at first login.'; await adminUsers(); });
   bindForm('languageForm', async (values) => { const result = await api('/api/settings/language', 'POST', values); applyLanguage(result.language); status('Language saved.', true); });
+  bindForm('currencyForm', async (values) => { const result = await api('/api/settings/household', 'PATCH', { currency: values.currency.toUpperCase(), timezone: values.timezone }); householdCurrency = result.currency; status(`Currency saved as ${result.currency}.`, true); await dashboard(); });
   bindForm('reauthForm', async (values) => { await api('/api/auth/reauthenticate', 'POST', values); status('Identity confirmed. You can now change sign-in methods.', true); });
   $('startMfaButton').addEventListener('click', () => perform(async () => {
     const result = await api('/api/settings/mfa/setup', 'POST', {});

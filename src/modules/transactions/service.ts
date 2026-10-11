@@ -9,6 +9,7 @@ type Account = {
   householdId: string;
   name: string;
   type: AccountType;
+  openingBalance: number;
   balance: number;
   archived: boolean;
 };
@@ -26,7 +27,7 @@ type Transaction = {
   transactionDate: string;
 };
 
-export type AccountView = Readonly<Omit<Account, 'balance' | 'archived'> & { balance: number; archived: boolean }>;
+export type AccountView = Readonly<Omit<Account, 'balance' | 'archived'> & { openingBalance: number; balance: number; archived: boolean }>;
 export type Totals = Readonly<{
   householdIncome: number;
   householdExpense: number;
@@ -52,7 +53,7 @@ export class LedgerService {
     if ([...this.accounts.values()].some((existing) => existing.householdId === context.householdId && existing.name.toLocaleLowerCase('en-US') === normalizedName)) {
       throw new Error('An account with this name already exists');
     }
-    const account: Account = { id: id('account'), householdId: context.householdId, name: displayName, type, balance: openingBalance, archived: false };
+    const account: Account = { id: id('account'), householdId: context.householdId, name: displayName, type, openingBalance, balance: openingBalance, archived: false };
     this.accounts.set(account.id, account);
     this.audits.record(context, 'account', account.id, 'created', null, account);
     return { ...account };

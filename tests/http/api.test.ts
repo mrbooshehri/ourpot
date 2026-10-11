@@ -37,11 +37,12 @@ describe('HTTP API', () => {
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');
     expect(html).toContain('Transfers are excluded from income and expenses');
-    expect(html).toContain('totalsHelp');
+    expect(html).toContain('totalsHelpButton');
+    expect(html).toContain('totalsHelpModal');
     for (const page of ['dashboard', 'reports', 'profile', 'settings', 'rules']) expect(html).toContain(`data-page="${page}"`);
     expect(html).toContain('tabler-icon');
     expect(html).toContain('aria-label="Reports"');
-    expect(html).not.toContain('cdn.jsdelivr.net');
+    expect(html).toContain('@tabler/icons-webfont');
     expect(html).not.toContain('/api/demo/setup');
     expect(html).not.toContain('x-user-id');
   });
