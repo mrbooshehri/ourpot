@@ -19,7 +19,7 @@
     for (const id of ['authPanel', 'passwordChangePanel', 'setupPanel', 'dashboardPanel', 'reportsPanel', 'profilePanel', 'settingsPanel', 'rulesPanel', 'adminPanel']) $(id).hidden = id !== panel;
     $('appNav').hidden = panel === 'authPanel';
     $('headerActions').hidden = panel === 'authPanel' || panel === 'passwordChangePanel' || panel === 'setupPanel';
-    if (panel === 'authPanel') { $('avatarMenu').hidden = true; $('mobileMenuButton').setAttribute('aria-expanded', 'false'); document.querySelector('.shell').classList.remove('mobile-nav-open'); }
+    if (panel === 'authPanel') { $('avatarMenu').hidden = true; $('mobileMenuButton').setAttribute('aria-expanded', 'false'); document.querySelector('.shell').classList.remove('mobile-nav-open'); $('navBackdrop').hidden = true; }
   }
 
   async function api(path, method = 'GET', body) {
@@ -69,14 +69,23 @@
     localStorage.setItem('ourpot.navCollapsed', String(collapsed));
   });
   $('mobileMenuButton').addEventListener('click', () => {
-    const shell = document.querySelector('.shell'); const open = shell.classList.toggle('mobile-nav-open'); $('mobileMenuButton').setAttribute('aria-expanded', String(open));
+    const shell = document.querySelector('.shell'); const open = shell.classList.toggle('mobile-nav-open'); $('mobileMenuButton').setAttribute('aria-expanded', String(open)); $('mobileMenuButton').setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation'); $('navBackdrop').hidden = !open;
   });
+  $('navBackdrop').addEventListener('click', () => $('mobileMenuButton').click());
   $('avatarMenuButton').addEventListener('click', () => { const menu = $('avatarMenu'); const open = menu.hidden; menu.hidden = !open; $('avatarMenuButton').setAttribute('aria-expanded', String(open)); });
   document.addEventListener('click', (event) => { if (!event.target.closest('.avatar-menu-wrap')) { $('avatarMenu').hidden = true; $('avatarMenuButton').setAttribute('aria-expanded', 'false'); } });
   for (const [buttonId, navId] of [['avatarProfileButton', 'profileNav'], ['avatarSettingsButton', 'settingsNav'], ['avatarRulesButton', 'rulesNav'], ['avatarAdminButton', 'adminNav']]) {
     $(buttonId).addEventListener('click', () => { $(navId).click(); $('avatarMenu').hidden = true; });
   }
   $('avatarLogoutButton').addEventListener('click', () => $('logoutButton').click());
+  const menuIcons = {
+    avatarProfileButton: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
+    avatarSettingsButton: '<path d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0 -8"/><path d="M3 12h2m14 0h2M12 3v2m0 14v2m6.364 -14.364l-1.414 1.414m-9.9 9.9l-1.414 1.414m0 -12.728l1.414 1.414m9.9 9.9l1.414 1.414"/>',
+    avatarRulesButton: '<path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 5v0m8 7v0m-4 7v0"/>',
+    avatarAdminButton: '<path d="M12 3l8 4v5c0 4.5-3.4 7.6-8 9c-4.6-1.4-8-4.5-8-9V7l8-4z"/>',
+    avatarLogoutButton: '<path d="M10 17l5-5l-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0 -2 -2h-6"/>',
+  };
+  for (const [id, body] of Object.entries(menuIcons)) { const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('tabler-icon', 'menu-icon'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.innerHTML = body; $(id).prepend(svg); }
   if (localStorage.getItem('ourpot.navCollapsed') === 'true') { document.querySelector('.shell').classList.add('nav-collapsed'); $('collapseNavButton').setAttribute('aria-pressed', 'true'); }
 
   async function checkAuth() {
