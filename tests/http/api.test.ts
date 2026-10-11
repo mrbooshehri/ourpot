@@ -36,6 +36,9 @@ describe('HTTP API', () => {
     expect(html).toContain('id="recentTransactions"');
     expect(html).toContain('/assets/chart.js');
     expect(html).toContain('<canvas id="transactionChart"');
+    expect(html).toContain('class="goal-card-stack"');
+    expect(html).toContain('id="auditTable"');
+    expect(html).toContain('name="amount" type="number" min="0.01" step="0.01"');
     const chartAsset = await app.fetch(new Request('http://localhost:3000/assets/chart.js'));
     expect(chartAsset.status).toBe(200);
     expect(chartAsset.headers.get('content-type')).toContain('application/javascript');

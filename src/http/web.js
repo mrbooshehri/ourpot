@@ -40,7 +40,11 @@
     return data;
   }
 
-  function formObject(form) { return Object.fromEntries(new FormData(form)); }
+  function formObject(form) {
+    const values = Object.fromEntries(new FormData(form));
+    for (const name of ['openingBalance', 'amount', 'targetAmount', 'price']) if (values[name] !== undefined && values[name] !== '') values[name] = Math.round(Number(values[name]) * 100);
+    return values;
+  }
   function item(list, text, action) {
     const li = document.createElement('li');
     const span = document.createElement('span');
@@ -102,7 +106,7 @@
     $('newItemModalTitle').textContent = title;
     $('newItemModalBody').append(target);
     editingRecord = record;
-    if (record) for (const [name, value] of Object.entries(record)) if (target.elements[name]) target.elements[name].value = value ?? '';
+    if (record) for (const [name, value] of Object.entries(record)) if (target.elements[name]) target.elements[name].value = ['openingBalance', 'amount', 'targetAmount', 'price'].includes(name) ? (Number(value) / 100).toFixed(2) : (value ?? '');
     modal.showModal();
     const firstField = target.querySelector('input, select, textarea');
     if (firstField) window.setTimeout(() => firstField.focus(), 50);
@@ -217,7 +221,7 @@
     renderTransactionChart(data.monthTransactions || []);
     const audits = $('auditList'); audits.replaceChildren();
     for (const event of (data.audits || []).slice(-8).reverse()) {
-      item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
+      const row = document.createElement('tr'); const iconCell = document.createElement('td'); const icon = document.createElement('i'); icon.className = `ti ti-${event.action === 'deleted' ? 'trash' : event.action === 'created' ? 'plus' : 'edit'}`; iconCell.append(icon); const action = document.createElement('td'); action.textContent = event.action.replaceAll('_', ' '); const partner = document.createElement('td'); partner.textContent = memberNames[event.actorUserId] || 'Household member'; const itemCell = document.createElement('td'); itemCell.textContent = event.entityType; const when = document.createElement('td'); when.textContent = event.createdAt ? new Date(event.createdAt).toLocaleString() : 'Recently'; row.append(iconCell, action, partner, itemCell, when); audits.append(row);
     }
     for (const select of [$('accounts'), $('destinationAccounts')]) {
       select.replaceChildren();
@@ -317,7 +321,7 @@
     const budgets = $('budgetList'); budgets.replaceChildren();
     for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const goal of data.goals || []) { const card = document.createElement('article'); card.className = 'goal-card'; card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><strong>${goal.name}</strong><span>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</span><small>${goal.status}</small><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`; card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(card); } const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML='<i class="ti ti-plus"></i><span>New savings goal</span>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd);
+    for (const [index, goal] of (data.goals || []).entries()) { const card = document.createElement('article'); card.className = 'goal-card'; card.style.setProperty('--goal-index', String(Math.min(index, 4))); card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><strong>${goal.name}</strong><span>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</span><small>${goal.status}</small><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`; card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(card); } const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML='<i class="ti ti-plus"></i><span>New savings goal</span>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd);
     const tasks = $('taskList'); tasks.replaceChildren();
     for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
