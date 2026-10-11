@@ -88,12 +88,14 @@
     $('newItemMenu').hidden = true;
     $('newDashboardButton').setAttribute('aria-expanded', 'false');
   }
-  let modalFormOrigin = null;
-  function openNewItem(targetId, title) {
+  let modalFormOrigin = null; let editingRecord = null;
+  function openNewItem(targetId, title, record = null) {
     const target = $(targetId); const modal = $('newItemModal');
     modalFormOrigin = { target, parent: target.parentElement, next: target.nextSibling };
     $('newItemModalTitle').textContent = title;
     $('newItemModalBody').append(target);
+    editingRecord = record;
+    if (record) for (const [name, value] of Object.entries(record)) if (target.elements[name]) target.elements[name].value = value ?? '';
     modal.showModal();
     const firstField = target.querySelector('input, select, textarea');
     if (firstField) window.setTimeout(() => firstField.focus(), 50);
@@ -101,7 +103,7 @@
   function closeNewItem() {
     const modal = $('newItemModal');
     if (modal.open) modal.close();
-    if (modalFormOrigin) { modalFormOrigin.parent.insertBefore(modalFormOrigin.target, modalFormOrigin.next); modalFormOrigin = null; }
+    if (modalFormOrigin) { modalFormOrigin.parent.insertBefore(modalFormOrigin.target, modalFormOrigin.next); modalFormOrigin = null; } editingRecord = null;
   }
   $('newDashboardButton').addEventListener('click', toggleNewMenu);
   $('mobileNewFab').addEventListener('click', toggleNewMenu);
@@ -271,13 +273,13 @@
 
   function renderPlanning(data, memberNames) {
     const budgets = $('budgetList'); budgets.replaceChildren();
-    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
+    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
+    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
     const tasks = $('taskList'); tasks.replaceChildren();
-    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
+    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
-    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription'); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
+    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription', { name: subscription.name, price: subscription.price, cadence: subscription.cadence, nextRenewalDate: subscription.nextRenewalDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
     const reminders = $('reminderList'); reminders.replaceChildren();
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
@@ -438,7 +440,7 @@
     ['goalForm', '/api/goals', 'Goal created.'],
     ['taskForm', '/api/tasks', 'Task created.'],
     ['subscriptionForm', '/api/subscriptions', 'Subscription added.'],
-  ]) bindForm(id, async (values) => { await api(path, 'POST', values); closeNewItem(); await dashboard(); status(success, true); });
+  ]) bindForm(id, async (values) => { const kind = path.split('/').pop(); const endpoint = editingRecord ? `${path}/${encodeURIComponent(editingRecord.id)}` : path; await api(endpoint, editingRecord ? 'PATCH' : 'POST', values); closeNewItem(); await dashboard(); status(editingRecord ? 'Record updated.' : success, true); });
 
   $('dashboardNav').addEventListener('click', () => perform(async () => { if (hasHousehold) { show('dashboardPanel'); await dashboard(); } else show('setupPanel'); }));
   $('reportsNav').addEventListener('click', () => perform(reports));

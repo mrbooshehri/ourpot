@@ -304,6 +304,12 @@ export class ApiApp {
         if (request.method === 'DELETE') { await this.postgresLedger.deleteTransaction(context, transactionId); return json({ ok: true }); }
       }
       const planningDelete = url.pathname.match(/^\/api\/(budgets|goals|tasks|subscriptions)\/([^/]+)$/);
+      if (planningDelete && request.method === 'PATCH') {
+        const key = planningDelete[1] as 'budgets' | 'goals' | 'tasks' | 'subscriptions'; const id = decodeURIComponent(planningDelete[2]!); const body = await request.json() as Record<string, unknown>;
+        const updates = ({ budgets: [['amount_minor', Number(body.amount)], ['period', String(body.period ?? '')], ['rationale', String(body.rationale ?? '')]], goals: [['name', String(body.name ?? '')], ['target_amount_minor', Number(body.targetAmount)]], tasks: [['title', String(body.title ?? '')], ['due_date', String(body.dueDate ?? '')]], subscriptions: [['name', String(body.name ?? '')], ['price_minor', Number(body.price)], ['cadence', String(body.cadence ?? '')], ['next_renewal_date', String(body.nextRenewalDate ?? '')]] } as const)[key];
+        const table = ({ budgets: 'budget_proposals', goals: 'savings_goals', tasks: 'financial_tasks', subscriptions: 'subscriptions' } as const)[key]; const set = updates.map(([column], index) => `${column}=$${index + 3}`).join(', '); const values = updates.map(([, value]) => value);
+        const result = await this.db.query(`UPDATE ${table} SET ${set} WHERE id=$1 AND household_id=$2 RETURNING id`, [id, context.householdId, ...values]); if (!result.rows[0]) return json({ error: 'Record not found' }, 404); return json({ ok: true });
+      }
       if (planningDelete && request.method === 'DELETE') {
         const key = planningDelete[1] as 'budgets' | 'goals' | 'tasks' | 'subscriptions';
         const table = ({ budgets: 'budget_proposals', goals: 'savings_goals', tasks: 'financial_tasks', subscriptions: 'subscriptions' } as const)[key];
