@@ -350,6 +350,7 @@ export class ApiApp {
     const tasks = await this.postgresTasks.listTasks(context);
     const subscriptions = await this.postgresTasks.listSubscriptions(context);
     const reminders = await this.postgresTasks.generateReminders(context, new Date());
+    const transactions = await this.postgresLedger.listTransactions(context);
     return json({
       report: buildReportFromData(await this.postgresLedger.listTransactions(context), financial.accounts, { from: monthStart, to: today }),
       accounts: financial.accounts,
@@ -362,6 +363,7 @@ export class ApiApp {
       tasks,
       subscriptions,
       reminders,
+      transactions: transactions.filter((transaction) => !transaction.deleted).slice(-12).reverse(),
     });
   }
 

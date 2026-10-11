@@ -22,6 +22,10 @@ describe('HTTP API', () => {
     expect(html).toContain('id="subscriptionList"');
     expect(html).toContain('Combined household');
     expect(html).toContain('Partner activity');
+    expect(html).toContain('id="sideNav"');
+    expect(html).toContain('id="recentTransactions"');
+    expect(html).toContain('id="accountCards"');
+    expect(html).toContain('data-visual="income-flow"');
     expect(html).toContain('Transfers are excluded from income and expenses');
     expect(html).toContain('totalsHelp');
     for (const page of ['dashboard', 'reports', 'profile', 'settings', 'rules']) expect(html).toContain(`data-page="${page}"`);

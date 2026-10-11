@@ -110,10 +110,21 @@
     $('netChange').textContent = String(data.totals.householdIncome - data.totals.householdExpense) + ' minor units';
     $('balance').textContent = String(data.accounts.reduce((total, account) => total + account.balance, 0)) + ' minor units';
     const accounts = $('accountList'); accounts.replaceChildren();
+    const recentTransactions = $('recentTransactions'); recentTransactions.replaceChildren();
     const audits = $('auditList'); audits.replaceChildren();
     const memberNames = Object.fromEntries((data.members || []).map((member) => [member.userId, member.displayName]));
     for (const account of data.accounts) {
-      item(accounts, account.name + ': ' + account.balance + (account.balance < 0 ? ' · negative balance' : ''));
+      const row = document.createElement('li');
+      const name = document.createElement('span'); name.textContent = account.name + (account.balance < 0 ? ' · negative' : ''); if (account.balance < 0) name.className = 'negative-balance';
+      const amount = document.createElement('strong'); amount.textContent = formatAmount(account.balance);
+      row.append(name, amount); accounts.append(row);
+    }
+    for (const transaction of data.transactions || []) {
+      const row = document.createElement('li');
+      const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+';
+      const main = document.createElement('span'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
+      const total = document.createElement('strong'); total.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); total.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount);
+      row.append(icon, main, total); recentTransactions.append(row);
     }
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
@@ -145,6 +156,8 @@
     renderPartnerTotals(data, memberNames);
     renderPlanning(data, memberNames);
   }
+
+  function formatAmount(value) { return Number(value).toLocaleString(document.documentElement.lang || 'en-US') + ' minor units'; }
 
   function renderDashboardVisuals(report) {
     const chart = $('dashboardChart'); chart.replaceChildren();
