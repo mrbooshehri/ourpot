@@ -141,3 +141,5 @@ The Docker image must serve the responsive web app and API on a configurable por
 ## 11. Deferred infrastructure choices
 
 Hosting provider, production region, key management service, backup retention, recovery targets, observability vendor, and exact frontend component library are deferred. They do not block the MVP domain implementation or local integration tests.
+
+The `mobile/` directory is a Flutter client scaffold for the versioned API. Its repositories preserve session cookies, decode integer minor units, register device tokens, and keep an explicit offline mutation queue with conflict states. Flutter analysis and tests require a Flutter-enabled development machine.

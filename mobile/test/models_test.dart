@@ -1,0 +1,2 @@
+import 'package:flutter_test/flutter_test.dart'; import 'package:ourpot_mobile/models.dart';
+void main() { test('decodes integer dashboard totals and notifications', () { final dashboard = HouseholdDashboard.fromJson({'accounts': [], 'totals': {'householdIncome': 1234}}); expect(dashboard.totals['householdIncome'], 1234); expect(NotificationPage.fromJson({'items': [], 'unreadCount': 2}).unreadCount, 2); }); }
