@@ -12,6 +12,7 @@ import { RulesService } from '../modules/rules';
 import { NotificationService } from '../modules/notifications/service';
 import { ImportService } from '../modules/imports/service';
 import { HealthService } from '../modules/operations/health';
+import { ApiV1Adapter } from './api-v1';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
@@ -36,6 +37,7 @@ export class ApiApp {
   readonly notifications: NotificationService;
   readonly imports: ImportService;
   readonly health: HealthService;
+  readonly v1: ApiV1Adapter;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
     this.db = db;
@@ -46,6 +48,7 @@ export class ApiApp {
     this.imports = new ImportService(db);
     this.health = new HealthService(db);
     this.postgresLedger = new PostgresTransactionService(db);
+    this.v1 = new ApiV1Adapter(this.postgresLedger);
     this.postgresPlanning = new PostgresPlanningService(db);
     this.postgresTasks = new PostgresTaskSubscriptionService(db);
   }
@@ -255,6 +258,15 @@ export class ApiApp {
         return json({ ok: true });
       }
       const context = await this.contextFrom(principal.userId);
+      if (request.method === 'GET' && url.pathname === '/api/v1/dashboard') return json(await this.v1.dashboard(context));
+      if (request.method === 'GET' && url.pathname === '/api/v1/reports') {
+        return json(await this.v1.report(context, url.searchParams.get('from') ?? '', url.searchParams.get('to') ?? ''));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/v1/export') {
+        const format = url.searchParams.get('format') ?? 'json';
+        const content = await this.v1.export(context, format as 'json' | 'csv');
+        return new Response(content, { headers: { 'cache-control': 'no-store', 'content-type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8', 'content-disposition': `attachment; filename="ourpot-export.${format}"` } });
+      }
       if (request.method === 'POST' && url.pathname === '/api/v1/imports') {
         const body = await request.json() as Record<string, unknown>;
         return json(await this.imports.createBatch(context, {

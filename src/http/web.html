@@ -164,7 +164,7 @@
 
       <section id="reportsPanel" data-page="reports" hidden class="stack">
         <div class="page-heading"><div><h1>Reports</h1><p class="subtle">Review household money over a selected time range.</p></div></div>
-        <form id="reportForm" class="card report-controls"><label>From<input name="from" type="date" required></label><label>To<input name="to" type="date" required></label><button>Update report</button></form>
+        <form id="reportForm" class="card report-controls"><label>From<input name="from" type="date" required></label><label>To<input name="to" type="date" required></label><button>Update report</button><a id="exportCsvButton" class="button-link" href="/api/v1/export?format=csv">Download CSV</a></form>
         <p id="reportStatus" class="hint"></p>
         <div id="reportSummary" class="grid metrics" hidden><div class="card metric-card"><span class="label">Household income</span><strong id="reportIncome" class="metric">0</strong></div><div class="card metric-card"><span class="label">Household expenses</span><strong id="reportExpense" class="metric">0</strong></div><div class="card metric-card"><span class="label">Net change</span><strong id="reportNet" class="metric">0</strong></div></div>
         <div class="grid two"><div class="card"><h2>Expenses by category</h2><ul id="reportCategories" class="compact-list"></ul></div><div class="card"><h2>Monthly activity</h2><ul id="reportMonthly" class="compact-list"></ul></div></div>
