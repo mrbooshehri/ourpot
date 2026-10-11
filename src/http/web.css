@@ -106,3 +106,20 @@ body:has(#appNav:not([hidden])){background:#eef0f7;color:#191b24}
 .account-pagination{display:flex;justify-content:center;align-items:center;gap:7px;padding-block:2px 4px}
 .account-pagination .owl-dot{inline-size:8px;block-size:8px;min-block-size:8px;padding:0;border:0;border-radius:50%;background:#cdd5e8;transition:transform .2s ease,background .2s ease}
 .account-pagination .owl-dot.active{background:#3d67c2;transform:scale(1.35)}
+
+/* Savings goal card: name and icon, progress, then saved/target totals. */
+.goal-card{display:flex;flex-direction:column;align-items:stretch;gap:16px;min-block-size:210px;padding:22px 22px 18px;overflow:hidden}
+.goal-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;min-block-size:48px}
+.goal-card-heading{display:grid;gap:5px;min-inline-size:0;text-align:start}
+.goal-card-heading strong{font-size:1.05rem;line-height:1.3;overflow-wrap:anywhere}
+.goal-card-heading small,.goal-card-footer small{display:block;color:#74708b;font-size:.76rem;font-weight:550}
+.goal-card-header .goal-icon{flex:none;order:2;inline-size:44px;block-size:44px;border-radius:14px;background:#e6defb;color:#765ac5}
+.goal-card .goal-progress{inline-size:100%;block-size:9px;border-radius:99px;background:#e9e4f7;overflow:hidden}
+.goal-card .goal-progress span{display:block;block-size:100%;border-radius:inherit;background:linear-gradient(90deg,#8067d7,#b28af1);transition:inline-size .35s ease}
+.goal-card-footer{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-block-start:auto}
+.goal-card-footer strong{font-size:1.05rem;line-height:1.15}
+.goal-card-target{text-align:end}
+.goal-card-actions{display:flex;justify-content:flex-end;gap:4px;margin-block-start:-8px}
+.goal-card-actions .icon-button{inline-size:30px;block-size:30px}
+.goal-card-stack .goal-card{transform:translateY(calc(var(--goal-index, 0) * 18px)) scale(calc(1 - var(--goal-index, 0) * .04))}
+.goal-card-stack .goal-card:hover{transform:translateY(calc(var(--goal-index, 0) * 18px - 6px)) scale(calc(1 - var(--goal-index, 0) * .04))}

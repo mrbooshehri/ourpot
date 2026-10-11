@@ -41,6 +41,10 @@ describe('HTTP API', () => {
     expect(html).toContain('name="amount" type="number" min="0.01" step="0.01"');
     const chartAsset = await app.fetch(new Request('http://localhost:3000/assets/chart.js'));
     expect(chartAsset.status).toBe(200);
+    const appAsset = await app.fetch(new Request('http://localhost:3000/assets/app.js'));
+    const appScript = await appAsset.text();
+    expect(appScript).toContain('goal-card-header');
+    expect(appScript).toContain('goal-card-footer');
     expect(chartAsset.headers.get('content-type')).toContain('application/javascript');
     expect(html).toContain('id="confirmActionModal"');
     expect(html).toContain('id="confirmActionButton"');
