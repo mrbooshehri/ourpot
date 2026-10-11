@@ -11,6 +11,10 @@ export function webAsset(path: string): Response | null {
     const file = Bun.file(new URL('../../node_modules/@simplewebauthn/browser/dist/bundle/index.umd.min.js', import.meta.url));
     return new Response(file, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
   }
+  if (path === '/assets/chart.js') {
+    const file = Bun.file(new URL('../../node_modules/chart.js/dist/chart.umd.js', import.meta.url));
+    return new Response(file, { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' } });
+  }
   const name = files[path];
   if (!name) return null;
   const file = Bun.file(new URL(name, import.meta.url));

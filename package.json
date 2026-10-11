@@ -13,6 +13,7 @@
     "@fastify/cookie": "^10.0.0",
     "@simplewebauthn/browser": "^14",
     "@simplewebauthn/server": "^14",
+    "chart.js": "^4",
     "drizzle-orm": "^0.36.0",
     "fastify": "^5.0.0",
     "otpauth": "^9",

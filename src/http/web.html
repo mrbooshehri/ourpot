@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <script src="/assets/passkeys.js" defer></script>
+  <script src="/assets/chart.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -121,7 +122,7 @@
           <div class="card"><h2>Savings goals</h2><div id="goalList" class="goal-stack"></div></div>
         </div>
         <div class="transaction-row" id="transactionCard">
-          <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><div id="transactionChart" class="transaction-chart" role="img" aria-label="Current month transaction trend"></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Transaction</th><th>Amount</th><th></th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
+          <div class="card transaction-card"><div class="page-heading"><div><h2>Recent transactions</h2><p class="hint">Daily income and expenses this month</p></div><span class="eyebrow">Latest activity</span></div><div class="transaction-chart"><canvas id="transactionChart" role="img" aria-label="Daily income and expenses this month"></canvas></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Transaction</th><th>Amount</th><th></th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
         </div>
         <div class="grid two dashboard-list-grid" id="planningCards">
           <div class="card"><h2>Budget proposals</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="budgetList"></tbody></table></div></div>

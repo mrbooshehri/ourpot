@@ -385,6 +385,7 @@ export class ApiApp {
       subscriptions,
       reminders,
       transactions: transactions.filter((transaction) => !transaction.deleted).slice(-12).reverse(),
+      monthTransactions: transactions.filter((transaction) => !transaction.deleted && transaction.transactionDate.startsWith(monthStart.slice(0, 7))),
       hasPendingInvitation,
       currency: household.rows[0]?.currency ?? 'USD',
     });

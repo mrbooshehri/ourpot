@@ -34,6 +34,11 @@ describe('HTTP API', () => {
     expect(html).toContain('id="planningCards"');
     expect((await app.fetch(new Request('http://localhost:3000/assets/logo.svg'))).status).toBe(200);
     expect(html).toContain('id="recentTransactions"');
+    expect(html).toContain('/assets/chart.js');
+    expect(html).toContain('<canvas id="transactionChart"');
+    const chartAsset = await app.fetch(new Request('http://localhost:3000/assets/chart.js'));
+    expect(chartAsset.status).toBe(200);
+    expect(chartAsset.headers.get('content-type')).toContain('application/javascript');
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');
     expect(html).toContain('Transfers are excluded from income and expenses');

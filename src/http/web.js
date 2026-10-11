@@ -4,6 +4,7 @@
   let hasHousehold = false;
   let currentImport = null;
   let householdCurrency = 'USD';
+  let monthlyTransactionChart = null;
 
   function applyLanguage(language) {
     const locale = language === 'fa' || language === 'ar' ? language : 'en';
@@ -189,6 +190,7 @@
     $('netChange').textContent = formatAmount(data.totals.householdIncome - data.totals.householdExpense);
     $('balance').textContent = formatAmount(data.accounts.reduce((total, account) => total + account.balance, 0));
     const accounts = $('accountList'); accounts.replaceChildren();
+    const recentTransactions = $('recentTransactions'); recentTransactions.replaceChildren();
     for (const account of data.accounts.filter((entry) => !entry.archived)) {
       const card = document.createElement('article'); card.className = 'account-card';
       const icon = document.createElement('span'); icon.className = 'account-card-icon'; icon.innerHTML = '<i class="ti ti-wallet"></i>';
@@ -202,12 +204,15 @@
     const add = document.createElement('button'); add.type = 'button'; add.className = 'account-card account-card-add'; add.innerHTML = '<i class="ti ti-plus"></i><span>Add account</span>'; add.onclick = () => openNewItem('accountForm', 'New account'); accounts.append(add);
     for (const transaction of data.transactions || []) {
       const row = document.createElement('tr');
-      const iconCell = document.createElement('td'); const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+'; iconCell.append(icon);
+      row.className = `transaction-row-${transaction.type}`;
+      const iconCell = document.createElement('td'); const icon = document.createElement('span'); icon.className = `transaction-icon ${transaction.type}`;
+      const typeIcons = { income: 'trending-up', expense: 'trending-down', transfer: 'arrows-exchange', adjustment: 'adjustments' };
+      const typeIcon = document.createElement('i'); typeIcon.className = `ti ti-${typeIcons[transaction.type] || 'receipt'}`; typeIcon.setAttribute('aria-hidden', 'true'); icon.append(typeIcon); iconCell.append(icon);
       const main = document.createElement('td'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
-      const total = document.createElement('td'); const totalValue = document.createElement('strong'); totalValue.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); totalValue.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount); total.append(totalValue);
+      const total = document.createElement('td'); const totalValue = document.createElement('strong'); totalValue.className = `transaction-amount ${transaction.type}`; totalValue.textContent = `${transaction.type === 'expense' ? '−' : transaction.type === 'income' ? '+' : ''}${formatAmount(transaction.amount)}`; total.append(totalValue);
       const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
     }
-    const chart = $('transactionChart'); chart.replaceChildren(); const month = new Date().toISOString().slice(0, 7); const monthRows = (data.transactions || []).filter((transaction) => transaction.transactionDate.startsWith(month)); const max = Math.max(...monthRows.map((transaction) => transaction.amount), 1); for (const transaction of monthRows.slice(-10)) { const bar = document.createElement('div'); bar.className = `transaction-bar ${transaction.type}`; bar.style.setProperty('--bar-size', `${Math.max(8, transaction.amount / max * 100)}%`); bar.title = `${transaction.description}: ${formatAmount(transaction.amount)}`; chart.append(bar); }
+    renderTransactionChart(data.monthTransactions || []);
     const audits = $('auditList'); audits.replaceChildren();
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
@@ -241,6 +246,27 @@
   }
 
   function formatAmount(value) { return new Intl.NumberFormat(document.documentElement.lang || 'en-US', { style: 'currency', currency: householdCurrency, minimumFractionDigits: 2 }).format(Number(value) / 100); }
+
+  function renderTransactionChart(transactions) {
+    if (monthlyTransactionChart) monthlyTransactionChart.destroy();
+    if (typeof Chart === 'undefined') return;
+    const today = new Date(); const year = today.getFullYear(); const month = today.getMonth() + 1;
+    const days = today.getDate(); const income = Array(days).fill(0); const expenses = Array(days).fill(0);
+    for (const transaction of transactions) {
+      const [rowYear, rowMonth, rowDay] = transaction.transactionDate.split('-').map(Number);
+      if (rowYear !== year || rowMonth !== month || rowDay < 1 || rowDay > days) continue;
+      if (transaction.type === 'income') income[rowDay - 1] += transaction.amount / 100;
+      if (transaction.type === 'expense') expenses[rowDay - 1] += transaction.amount / 100;
+    }
+    monthlyTransactionChart = new Chart($('transactionChart'), {
+      type: 'line',
+      data: { labels: Array.from({ length: days }, (_, index) => String(index + 1)), datasets: [
+        { label: 'Income', data: income, borderColor: '#18a577', backgroundColor: 'rgba(24,165,119,.12)', fill: true, tension: .38, borderWidth: 3, pointRadius: 0, pointHoverRadius: 5 },
+        { label: 'Expenses', data: expenses, borderColor: '#e1636d', backgroundColor: 'rgba(225,99,109,.09)', fill: true, tension: .38, borderWidth: 3, pointRadius: 0, pointHoverRadius: 5 },
+      ] },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, animation: { duration: 550 }, plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatAmount(Math.round(context.parsed.y * 100))}` } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { beginAtZero: true, border: { display: false }, grid: { color: '#e9edf5' }, ticks: { callback: (value) => formatAmount(Number(value) * 100) } } } },
+    });
+  }
 
   function renderDashboardVisuals(report) {
     const chart = $('dashboardChart'); chart.replaceChildren();
