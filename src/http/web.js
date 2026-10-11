@@ -184,6 +184,8 @@
   async function dashboard() {
     const data = await api('/api/dashboard');
     householdCurrency = data.currency || 'USD';
+    const memberNames = Object.fromEntries((data.members || []).map((member) => [member.userId, member.displayName]));
+    document.querySelectorAll('.currency-label').forEach((label) => { label.textContent = `(${householdCurrency})`; });
     $('inviteRibbon').hidden = data.hasPendingInvitation || localStorage.getItem('ourpot.inviteRibbonDismissed') === 'true';
     $('income').textContent = formatAmount(data.totals.householdIncome);
     $('expense').textContent = formatAmount(data.totals.householdExpense);
@@ -441,7 +443,7 @@
     show('settingsPanel');
     const languageData = await api('/api/settings/language');
     $('languageForm').elements.language.value = languageData.language;
-    const householdData = await api('/api/settings/household'); householdCurrency = householdData.currency || householdCurrency; $('currencyForm').elements.currency.value = householdData.currency || 'USD'; $('currencyForm').elements.currencyName.value = householdData.currencyName || ''; $('currencyForm').elements.currencyIcon.value = householdData.currencyIcon || 'currency-dollar';
+    const householdData = await api('/api/settings/household'); householdCurrency = householdData.currency || householdCurrency; $('currencyForm').elements.currency.value = householdData.currency || 'USD'; $('currencyForm').elements.currencyName.value = householdData.currencyName || ''; $('currencyForm').elements.currencyIcon.value = householdData.currencyIcon || 'currency-dollar'; document.querySelectorAll('.currency-label').forEach((label) => { label.textContent = `(${householdCurrency})`; });
   }
 
   bindForm('reportForm', async (values) => { await loadReport(values.from, values.to); });
