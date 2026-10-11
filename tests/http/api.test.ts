@@ -54,6 +54,7 @@ describe('HTTP API', () => {
     expect(html).not.toContain('class="eyebrow"');
     const css = await (await app.fetch(new Request('http://localhost:3000/assets/app.css'))).text();
     expect(css).toContain('touch-action:pan-x pan-y');
+    expect(css).toContain('grid-template-columns:auto minmax(0,1fr) auto');
     expect(html).not.toContain('id="status"');
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');

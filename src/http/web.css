@@ -79,3 +79,10 @@ body:has(#appNav:not([hidden])){background:#eef0f7;color:#191b24}
 .subscription-card{grid-column:1 / -1}
 
 .section-add-button{display:inline-grid;place-items:center;inline-size:32px;block-size:32px;padding:0;border:1px solid #cbd6ee;border-radius:10px;background:#eef3ff;color:#3a6fd8;font-size:1.1rem;box-shadow:none}.section-add-button:hover{background:#dfe9ff;color:#244f9f}.goal-card .goal-save-button{color:#258665}.goal-card .goal-save-button:hover{background:#e7f7ef;color:#176c50}.goal-card .row-actions{display:flex;gap:3px}
+
+/* Keep carousel controls outside the account cards. */
+.account-carousel-shell{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
+.account-carousel{min-inline-size:0}
+.carousel-arrow{position:static;transform:none;flex:none}
+.carousel-arrow-prev,.carousel-arrow-next{inset-inline:auto}
+@media(max-width:760px){.carousel-arrow{inline-size:32px;block-size:32px}}
