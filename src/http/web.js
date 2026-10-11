@@ -356,8 +356,8 @@
     for (const [index, goal] of goalItems.entries()) {
       const card = document.createElement('article'); card.className = 'goal-card'; card.style.setProperty('--goal-index', String(Math.min(index, 4)));
       const percent = goal.targetAmount > 0 ? Math.min(100, Math.round((goal.contributedAmount / goal.targetAmount) * 100)) : 0;
-      card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><div class="goal-card-copy"><strong>${goal.name}</strong><small>${goal.status === 'complete' ? 'Complete' : `${percent}% saved`}</small><span class="goal-progress"><span style="inline-size:${percent}%"></span></span></div><strong class="goal-card-total">${formatAmount(goal.contributedAmount)}<small>of ${formatAmount(goal.targetAmount)}</small></strong><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`;
-      card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id, goal.name); goals.append(card);
+      card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><div class="goal-card-copy"><strong>${goal.name}</strong><small>${goal.status === 'complete' ? 'Complete' : `${percent}% saved`}</small><span class="goal-progress"><span style="inline-size:${percent}%"></span></span></div><strong class="goal-card-total">${formatAmount(goal.contributedAmount)}<small>of ${formatAmount(goal.targetAmount)}</small></strong><div class="row-actions"><button class="icon-button goal-save-button" title="Add saved amount" aria-label="Add saved amount"><i class="ti ti-plus"></i></button><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`;
+      card.querySelector('[title="Add saved amount"]').onclick = () => openNewItem('goalContributionForm', `Add saved amount · ${goal.name}`, { goalId: goal.id }); card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id, goal.name); goals.append(card);
     }
     if (!goalItems.length) { const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML = '<i class="ti ti-sparkles"></i><strong>Start a savings goal</strong><small>Give a shared plan a name and target.</small>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd); }
     const tasks = $('taskList'); tasks.replaceChildren();
@@ -522,6 +522,7 @@
     $('destinationAccounts').disabled = !transfer;
     $('destinationAccounts').required = transfer;
   });
+  bindForm('goalContributionForm', async (values) => { await api('/api/goals/contributions', 'POST', values); closeNewItem(); await dashboard(); status('Saved amount added to goal.', true); });
   for (const [id, path, success] of [
     ['budgetForm', '/api/budgets', 'Budget proposed.'],
     ['goalForm', '/api/goals', 'Goal created.'],
