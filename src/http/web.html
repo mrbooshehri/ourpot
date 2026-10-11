@@ -28,6 +28,7 @@
       <div class="avatar-menu-wrap"><button type="button" id="avatarMenuButton" class="avatar-button" aria-label="Open account menu" aria-expanded="false">Me</button><div id="avatarMenu" class="avatar-menu" hidden><button type="button" id="avatarProfileButton">Profile</button><button type="button" id="avatarSettingsButton">Settings</button><button type="button" id="avatarRulesButton">Rules</button><button type="button" id="avatarAdminButton" hidden>Administration</button><button type="button" id="avatarLogoutButton" class="danger">Sign out</button></div></div>
     </div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
+    <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 
     <main>
       <section id="authPanel" class="auth-panel">
@@ -97,6 +98,7 @@
 
       <section id="dashboardPanel" data-page="dashboard" hidden class="stack">
         <div class="page-heading dashboard-heading"><div><h1>Household dashboard</h1><p class="subtle">A shared view of your household activity.</p></div><div class="dashboard-actions"><button type="button" id="newDashboardButton" class="new-dashboard-button" aria-expanded="false"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button><div id="newItemMenu" class="new-item-menu" hidden role="menu"><button type="button" data-new-target="accountForm" role="menuitem">Account</button><button type="button" data-new-target="transactionForm" role="menuitem">Transaction</button><button type="button" data-new-target="budgetForm" role="menuitem">Budget proposal</button><button type="button" data-new-target="goalForm" role="menuitem">Savings goal</button><button type="button" data-new-target="taskForm" role="menuitem">Required task</button><button type="button" data-new-target="subscriptionForm" role="menuitem">Subscription</button></div></div></div>
+        <div id="inviteRibbon" class="action-ribbon" hidden><div><strong>Invite your partner</strong><p>Share the household with your partner to plan together.</p></div><button type="button" id="inviteRibbonButton">Open Settings</button><button type="button" id="dismissInviteRibbon" class="icon-button" aria-label="Dismiss">×</button></div>
         <button type="button" id="mobileNewFab" class="mobile-new-fab" aria-label="Create new item"><svg class="tabler-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
         <section class="card overview" aria-labelledby="combined-household-heading">
           <div class="page-heading"><div><h2 id="combined-household-heading">Combined household</h2><p class="subtle">Both partners together</p></div></div>
@@ -114,7 +116,7 @@
           <p class="hint">These figures show who entered transactions. They do not represent ownership, reimbursement, or debt.</p>
         </section>
                 <div class="grid two dashboard-entry-grid" id="transactionCard">
-          <div class="card" id="accountCards"><h2>Accounts</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Account</th><th>Balance</th></tr></thead><tbody id="accountList"></tbody></table></div></div>
+          <div class="card" id="accountCards"><h2>Accounts</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Account</th><th>Balance</th><th></th></tr></thead><tbody id="accountList"></tbody></table></div></div>
           <div class="card transaction-card"><div class="page-heading"><h2>Recent transactions</h2><span class="eyebrow">Latest activity</span></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Transaction</th><th>Amount</th><th></th></tr></thead><tbody id="recentTransactions"></tbody></table></div></div>
         </div>
         <div class="grid two dashboard-planning-grid" id="planningCards">
@@ -130,7 +132,6 @@
           <div class="card"><h2>Subscriptions and reminders</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Subscription</th><th>Price</th><th>Renews</th><th></th></tr></thead><tbody id="subscriptionList"></tbody></table></div><ul id="reminderList" class="compact-list"></ul></div>
         </div>
         <div class="grid two">
-          <div class="card"><h2>Invite your partner</h2><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
           <div class="card"><h2>Recent activity</h2><ul id="auditList" class="compact-list"></ul></div>
         </div>
         <div id="formTemplates" hidden>
@@ -149,6 +150,7 @@
         <div class="grid two">
           <div class="card"><h2>Language</h2><p class="hint">English uses left-to-right layout. Persian and Arabic use right-to-left layout.</p><form id="languageForm" class="stack"><label>Language<select name="language"><option value="en">English</option><option value="fa">فارسی</option><option value="ar">العربية</option></select></label><button>Save language</button></form></div>
           <div class="card"><h2>Household</h2><p class="hint">Shared accounts and planning are visible to both partners. Notification behavior is managed on the Rules page.</p></div>
+          <div class="card" id="inviteSettingsCard"><h2>Invite your partner</h2><p class="hint">Invite the second household member. The invitation link expires after seven days.</p><form id="inviteForm" class="stack"><label>Partner email<input name="email" type="email" required></label><button>Create invitation</button></form><p id="inviteLink" class="wrap"></p></div>
         </div>
       </section>
 

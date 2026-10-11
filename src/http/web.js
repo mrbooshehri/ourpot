@@ -13,6 +13,9 @@
   function status(message, good = false) {
     $('status').textContent = message || '';
     $('status').style.color = good ? '#1d5b4a' : '#8c302e';
+    if (!message) return;
+    const toast = document.createElement('div'); toast.className = `toast ${good ? 'toast-success' : 'toast-error'}`; toast.textContent = message; $('toastRegion').append(toast);
+    window.setTimeout(() => toast.remove(), 5200);
   }
 
   function show(panel) {
@@ -78,6 +81,8 @@
     $(buttonId).addEventListener('click', () => { $(navId).click(); $('avatarMenu').hidden = true; });
   }
   $('avatarLogoutButton').addEventListener('click', () => $('logoutButton').click());
+  $('inviteRibbonButton').addEventListener('click', () => $('settingsNav').click());
+  $('dismissInviteRibbon').addEventListener('click', () => { $('inviteRibbon').hidden = true; localStorage.setItem('ourpot.inviteRibbonDismissed', 'true'); });
   function toggleNewMenu() {
     const menu = $('newItemMenu');
     const open = menu.hidden;
@@ -176,6 +181,7 @@
 
   async function dashboard() {
     const data = await api('/api/dashboard');
+    $('inviteRibbon').hidden = data.hasPendingInvitation || localStorage.getItem('ourpot.inviteRibbonDismissed') === 'true';
     $('income').textContent = String(data.totals.householdIncome) + ' minor units';
     $('expense').textContent = String(data.totals.householdExpense) + ' minor units';
     $('netChange').textContent = String(data.totals.householdIncome - data.totals.householdExpense) + ' minor units';
@@ -188,14 +194,14 @@
       const row = document.createElement('tr');
       const name = document.createElement('td'); name.textContent = account.name + (account.balance < 0 ? ' · negative' : ''); if (account.balance < 0) name.className = 'negative-balance';
       const amount = document.createElement('td'); const amountValue = document.createElement('strong'); amountValue.textContent = formatAmount(account.balance); amount.append(amountValue);
-      row.append(name, amount); accounts.append(row);
+      const actions = document.createElement('td'); actions.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit account'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('accountForm', 'Edit account', { id: account.id, name: account.name, type: account.type, openingBalance: account.openingBalance }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove account'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm(`Archive account “${account.name}”? Existing transactions will be kept.`)) return; await api(`/api/accounts/${encodeURIComponent(account.id)}`, 'DELETE'); await dashboard(); status('Account archived.', true); }); actions.append(edit, remove); row.append(name, amount, actions); accounts.append(row);
     }
     for (const transaction of data.transactions || []) {
       const row = document.createElement('tr');
       const iconCell = document.createElement('td'); const icon = document.createElement('span'); icon.className = 'transaction-icon ' + (transaction.type === 'expense' ? 'expense' : ''); icon.textContent = transaction.type === 'expense' ? '−' : '+'; iconCell.append(icon);
       const main = document.createElement('td'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
       const total = document.createElement('td'); const totalValue = document.createElement('strong'); totalValue.className = 'transaction-amount ' + (transaction.type === 'expense' ? 'expense' : ''); totalValue.textContent = (transaction.type === 'expense' ? '-' : '+') + formatAmount(transaction.amount); total.append(totalValue);
-      const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.textContent = '✎'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.textContent = '×'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
+      const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
     }
     for (const event of (data.audits || []).slice(-8).reverse()) {
       item(audits, event.action + ' · ' + event.entityType + ' · by ' + (memberNames[event.actorUserId] || 'Household member'));
@@ -275,17 +281,17 @@
 
   function renderPlanning(data, memberNames) {
     const budgets = $('budgetList'); budgets.replaceChildren();
-    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
+    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
+    for (const goal of data.goals || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${goal.name}</td><td>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</td><td>${goal.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(row); }
     const tasks = $('taskList'); tasks.replaceChildren();
-    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
+    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
-    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription">✎</button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription">×</button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription', { name: subscription.name, price: subscription.price, cadence: subscription.cadence, nextRenewalDate: subscription.nextRenewalDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
+    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription', { name: subscription.name, price: subscription.price, cadence: subscription.cadence, nextRenewalDate: subscription.nextRenewalDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
     const reminders = $('reminderList'); reminders.replaceChildren();
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
-  async function removePlanning(type, id) { if (!window.confirm('Remove this record?')) return; await api(`/api/${type}s/${encodeURIComponent(id)}`, 'DELETE'); await dashboard(); status('Record removed.', true); }
+  async function removePlanning(type, id) { const labels = { budget: 'budget proposal', goal: 'savings goal', task: 'required task', subscription: 'subscription' }; const label = labels[type] || 'record'; if (!window.confirm(`Remove this ${label}? This cannot be undone.`)) return; await api(`/api/${type}s/${encodeURIComponent(id)}`, 'DELETE'); await dashboard(); status(`${label[0].toUpperCase() + label.slice(1)} removed.`, true); }
 
   async function rules() {
     show('rulesPanel');
@@ -423,7 +429,7 @@
   bindForm('inviteForm', async (values) => {
     const invitation = await api('/api/invitations', 'POST', values);
     $('inviteLink').textContent = 'Share this link privately with your partner: ' + location.origin + '/?invite=' + encodeURIComponent(invitation.token);
-    status('Invitation created. It expires in seven days.', true);
+    $('inviteRibbon').hidden = true; status('Invitation created. It expires in seven days.', true);
   });
   bindForm('accountForm', async (values) => { await api('/api/accounts', 'POST', values); closeNewItem(); await dashboard(); status('Account added.', true); });
   bindForm('transactionForm', async (values) => {

@@ -81,6 +81,11 @@ export class PostgresHouseholdService {
     return { token, householdId: context.householdId, email: normalized, createdAt, expiresAt };
   }
 
+  async hasPendingInvitation(context: HouseholdContext): Promise<boolean> {
+    const result = await this.db.query<{ count: number }>("SELECT count(*)::int AS count FROM invitations WHERE household_id=$1 AND status='pending' AND expires_at > now()", [context.householdId]);
+    return (result.rows[0]?.count ?? 0) > 0;
+  }
+
   async getInvitation(token: string): Promise<PersistedInvitationDetails> {
     const result = await this.db.query<{ email: string; household_name: string; expires_at: Date; status: string }>(
       `SELECT i.email, h.name AS household_name, i.expires_at, i.status

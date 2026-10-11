@@ -297,6 +297,9 @@ export class ApiApp {
       }
       if (request.method === 'GET' && url.pathname === '/api/dashboard') return this.dashboard(context);
       if (request.method === 'POST' && url.pathname === '/api/accounts') return this.createAccount(context, await request.json());
+      const accountRoute = url.pathname.match(/^\/api\/accounts\/([^/]+)$/);
+      if (accountRoute && request.method === 'PATCH') { const body = await request.json() as Record<string, unknown>; const result = await this.db.query('UPDATE accounts SET name=$1,type=$2,opening_balance=$3 WHERE id=$4 AND household_id=$5 RETURNING id', [String(body.name ?? ''), String(body.type ?? 'checking'), Number(body.openingBalance ?? 0), decodeURIComponent(accountRoute[1]!), context.householdId]); if (!result.rows[0]) return json({ error: 'Account not found' }, 404); return json({ ok: true }); }
+      if (accountRoute && request.method === 'DELETE') { const result = await this.db.query('UPDATE accounts SET archived=true WHERE id=$1 AND household_id=$2 RETURNING id', [decodeURIComponent(accountRoute[1]!), context.householdId]); if (!result.rows[0]) return json({ error: 'Account not found' }, 404); return json({ ok: true }); }
       if (request.method === 'POST' && url.pathname === '/api/transactions') return this.createTransaction(context, await request.json());
       if (url.pathname.startsWith('/api/transactions/')) {
         const transactionId = decodeURIComponent(url.pathname.slice('/api/transactions/'.length));
@@ -365,6 +368,7 @@ export class ApiApp {
     const subscriptions = await this.postgresTasks.listSubscriptions(context);
     const reminders = await this.postgresTasks.generateReminders(context, new Date());
     const transactions = await this.postgresLedger.listTransactions(context);
+    const hasPendingInvitation = await this.households.hasPendingInvitation(context);
     return json({
       report: buildReportFromData(await this.postgresLedger.listTransactions(context), financial.accounts, { from: monthStart, to: today }),
       accounts: financial.accounts,
@@ -378,6 +382,7 @@ export class ApiApp {
       subscriptions,
       reminders,
       transactions: transactions.filter((transaction) => !transaction.deleted).slice(-12).reverse(),
+      hasPendingInvitation,
     });
   }
 
