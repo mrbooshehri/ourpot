@@ -44,8 +44,9 @@ describe('HTTP API', () => {
     expect(chartAsset.headers.get('content-type')).toContain('application/javascript');
     expect(html).toContain('id="confirmActionModal"');
     expect(html).toContain('id="confirmActionButton"');
-    expect(html).toContain('id="accountPrev"');
-    expect(html).toContain('id="accountNext"');
+    expect(html).toContain('id="accountPagination"');
+    expect(html).not.toContain('id="accountPrev"');
+    expect(html).not.toContain('id="accountNext"');
     expect(html).toContain('id="goalList"');
     expect(html).toContain('id="subscriptionCard"');
     expect(html).toContain('id="goalContributionForm"');

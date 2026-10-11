@@ -86,3 +86,13 @@ body:has(#appNav:not([hidden])){background:#eef0f7;color:#191b24}
 .carousel-arrow{position:static;transform:none;flex:none}
 .carousel-arrow-prev,.carousel-arrow-next{inset-inline:auto}
 @media(max-width:760px){.carousel-arrow{inline-size:32px;block-size:32px}}
+
+/* Unified draggable account carousel. */
+.account-carousel-shell{display:block;min-inline-size:0}
+.account-carousel{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:12px 10px 18px;margin:0 -10px;touch-action:pan-x pan-y;cursor:grab}
+.account-carousel.is-dragging{cursor:grabbing;scroll-behavior:auto;user-select:none}
+.account-carousel .account-card{flex:0 0 clamp(270px,32vw,330px);min-block-size:180px;padding:22px;scroll-snap-align:start}
+.account-pagination{display:flex;justify-content:center;align-items:center;gap:7px;padding-block:2px 4px}
+.account-dot{inline-size:8px;block-size:8px;min-block-size:8px;padding:0;border-radius:50%;background:#cdd5e8;transition:transform .2s ease,background .2s ease}
+.account-dot.active{background:#3d67c2;transform:scale(1.35)}
+@media(max-width:760px){.account-carousel .account-card{flex-basis:82vw;min-block-size:176px}.account-carousel{padding-inline:8px;margin-inline:-8px}}
