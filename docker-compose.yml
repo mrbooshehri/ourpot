@@ -8,6 +8,8 @@ services:
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
       AUTH_ALLOW_INSECURE_LOCALHOST: ${AUTH_ALLOW_INSECURE_LOCALHOST:-true}
+      BACKUP_DIR: /var/lib/ourpot/backups
+      BACKUP_KEY: ${BACKUP_KEY:-}
       # Development-only fallback; set TOTP_ENCRYPTION_KEY for any persistent deployment.
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
@@ -18,6 +20,8 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - backup_data:/var/lib/ourpot/backups
 
   worker:
     build: .
@@ -25,10 +29,14 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://ourpot:ourpot@postgres:5432/ourpot
+      BACKUP_DIR: /var/lib/ourpot/backups
+      BACKUP_KEY: ${BACKUP_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - backup_data:/var/lib/ourpot/backups
 
   postgres:
     image: postgres:16-alpine
@@ -50,3 +58,4 @@ services:
 
 volumes:
   postgres_data:
+  backup_data:

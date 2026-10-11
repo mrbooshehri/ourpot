@@ -11,6 +11,7 @@ import { PostgresTaskSubscriptionService } from '../modules/tasks/postgres-servi
 import { RulesService } from '../modules/rules';
 import { NotificationService } from '../modules/notifications/service';
 import { ImportService } from '../modules/imports/service';
+import { HealthService } from '../modules/operations/health';
 import type { HouseholdContext } from '../shared/household-context';
 import type { DatabaseClient } from '../db/client';
 import type { AppConfig } from '../config';
@@ -34,6 +35,7 @@ export class ApiApp {
   readonly rules: RulesService;
   readonly notifications: NotificationService;
   readonly imports: ImportService;
+  readonly health: HealthService;
 
   constructor(db: DatabaseClient, private readonly config: AppConfig) {
     this.db = db;
@@ -42,6 +44,7 @@ export class ApiApp {
     this.rules = new RulesService(db);
     this.notifications = new NotificationService(db);
     this.imports = new ImportService(db);
+    this.health = new HealthService(db);
     this.postgresLedger = new PostgresTransactionService(db);
     this.postgresPlanning = new PostgresPlanningService(db);
     this.postgresTasks = new PostgresTaskSubscriptionService(db);
@@ -50,6 +53,10 @@ export class ApiApp {
   async fetch(request: Request, clientIp = ''): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/api/health') return json({ ok: true });
+    if (request.method === 'GET' && url.pathname === '/api/ready') {
+      const report = await this.health.readiness();
+      return json(report, report.ready ? 200 : 503);
+    }
     if (request.method === 'GET') {
       const asset = webAsset(url.pathname);
       if (asset) return asset;
