@@ -42,6 +42,12 @@ describe('HTTP API', () => {
     const chartAsset = await app.fetch(new Request('http://localhost:3000/assets/chart.js'));
     expect(chartAsset.status).toBe(200);
     expect(chartAsset.headers.get('content-type')).toContain('application/javascript');
+    expect(html).toContain('id="confirmActionModal"');
+    expect(html).toContain('id="confirmActionButton"');
+    expect(html).toContain('id="accountPrev"');
+    expect(html).toContain('id="accountNext"');
+    expect(html).toContain('id="goalList"');
+    expect(html).not.toContain('id="status"');
     expect(html).toContain('id="accountCards"');
     expect(html).toContain('data-visual="income-flow"');
     expect(html).toContain('Transfers are excluded from income and expenses');

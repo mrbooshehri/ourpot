@@ -13,11 +13,31 @@
   }
 
   function status(message, good = false) {
-    $('status').textContent = message || '';
-    $('status').style.color = good ? '#1d5b4a' : '#8c302e';
     if (!message) return;
     const toast = document.createElement('div'); toast.className = `toast ${good ? 'toast-success' : 'toast-error'}`; toast.textContent = message; $('toastRegion').append(toast);
     window.setTimeout(() => toast.remove(), 5200);
+  }
+
+  function openModal(dialog) {
+    dialog.showModal();
+    dialog.append($('toastRegion'));
+    dialog.addEventListener('close', () => {
+      const remaining = [...document.querySelectorAll('dialog[open]')].at(-1);
+      (remaining || document.querySelector('.shell')).append($('toastRegion'));
+    }, { once: true });
+  }
+
+  function confirmAction({ title, description, action = 'Remove' }) {
+    const dialog = $('confirmActionModal');
+    $('confirmActionTitle').textContent = title;
+    $('confirmActionDescription').textContent = description;
+    $('confirmActionButton').textContent = action;
+    dialog.returnValue = 'cancel';
+    return new Promise((resolve) => {
+      dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+      openModal(dialog);
+      $('confirmCancelButton').focus();
+    });
   }
 
   function show(panel) {
@@ -77,6 +97,16 @@
     $('collapseNavButton').setAttribute('aria-pressed', String(collapsed)); $('collapseNavButton').setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
     localStorage.setItem('ourpot.navCollapsed', String(collapsed));
   });
+  const accountCarousel = $('accountList');
+  const updateAccountArrows = () => {
+    const shell = accountCarousel.parentElement;
+    shell.querySelector('#accountPrev').disabled = accountCarousel.scrollLeft <= 2;
+    shell.querySelector('#accountNext').disabled = accountCarousel.scrollLeft + accountCarousel.clientWidth >= accountCarousel.scrollWidth - 2;
+  };
+  $('accountPrev').addEventListener('click', () => accountCarousel.scrollBy({ left: -accountCarousel.clientWidth * .8, behavior: 'smooth' }));
+  $('accountNext').addEventListener('click', () => accountCarousel.scrollBy({ left: accountCarousel.clientWidth * .8, behavior: 'smooth' }));
+  accountCarousel.addEventListener('scroll', updateAccountArrows, { passive: true });
+  window.addEventListener('resize', updateAccountArrows);
   $('mobileMenuButton').addEventListener('click', () => {
     const shell = document.querySelector('.shell'); const open = shell.classList.toggle('mobile-nav-open'); $('mobileMenuButton').setAttribute('aria-expanded', String(open)); $('mobileMenuButton').setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation'); $('navBackdrop').hidden = !open;
   });
@@ -107,7 +137,7 @@
     $('newItemModalBody').append(target);
     editingRecord = record;
     if (record) for (const [name, value] of Object.entries(record)) if (target.elements[name]) target.elements[name].value = ['openingBalance', 'amount', 'targetAmount', 'price'].includes(name) ? (Number(value) / 100).toFixed(2) : (value ?? '');
-    modal.showModal();
+    openModal(modal);
     const firstField = target.querySelector('input, select, textarea');
     if (firstField) window.setTimeout(() => firstField.focus(), 50);
   }
@@ -130,7 +160,7 @@
   $('closeNewItemModal').addEventListener('click', closeNewItem);
   $('newItemModal').addEventListener('cancel', (event) => { event.preventDefault(); closeNewItem(); });
   $('newItemModal').addEventListener('click', (event) => { if (event.target === $('newItemModal')) closeNewItem(); });
-  $('totalsHelpButton').addEventListener('click', () => $('totalsHelpModal').showModal());
+  $('totalsHelpButton').addEventListener('click', () => openModal($('totalsHelpModal')));
   $('closeTotalsHelp').addEventListener('click', () => $('totalsHelpModal').close());
   const menuIcons = {
     avatarProfileButton: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
@@ -204,10 +234,11 @@
       const balance = document.createElement('b'); balance.className = account.balance < 0 ? 'negative-balance' : ''; balance.textContent = formatAmount(account.balance);
       const meta = document.createElement('small'); meta.textContent = `${account.type} · opening ${formatAmount(account.openingBalance)}`;
       const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit account'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('accountForm', 'Edit account', { id: account.id, name: account.name, type: account.type, openingBalance: account.openingBalance });
-      const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove account'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm(`Archive account “${account.name}”? Existing transactions will be kept.`)) return; await api(`/api/accounts/${encodeURIComponent(account.id)}`, 'DELETE'); await dashboard(); status('Account archived.', true); });
+      const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove account'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!await confirmAction({ title: `Archive ${account.name}?`, description: 'The account will disappear from active accounts. Its transactions remain in household history.', action: 'Archive account' })) return; await api(`/api/accounts/${encodeURIComponent(account.id)}`, 'DELETE'); await dashboard(); status('Account archived.', true); });
       const actions = document.createElement('div'); actions.className = 'account-card-actions'; actions.append(edit, remove); card.append(icon, title, balance, meta, actions); accounts.append(card);
     }
     const add = document.createElement('button'); add.type = 'button'; add.className = 'account-card account-card-add'; add.innerHTML = '<i class="ti ti-plus"></i><span>Add account</span>'; add.onclick = () => openNewItem('accountForm', 'New account'); accounts.append(add);
+    updateAccountArrows();
     for (const transaction of data.transactions || []) {
       const row = document.createElement('tr');
       row.className = `transaction-row-${transaction.type}`;
@@ -216,7 +247,7 @@
       const typeIcon = document.createElement('i'); typeIcon.className = `ti ti-${typeIcons[transaction.type] || 'receipt'}`; typeIcon.setAttribute('aria-hidden', 'true'); icon.append(typeIcon); iconCell.append(icon);
       const main = document.createElement('td'); main.className = 'transaction-main'; const title = document.createElement('strong'); title.textContent = transaction.description; const meta = document.createElement('small'); meta.textContent = `${transaction.transactionDate} · ${transaction.category || 'Uncategorized'}`; main.append(title, meta);
       const total = document.createElement('td'); const totalValue = document.createElement('strong'); totalValue.className = `transaction-amount ${transaction.type}`; totalValue.textContent = `${transaction.type === 'expense' ? '−' : transaction.type === 'income' ? '+' : ''}${formatAmount(transaction.amount)}`; total.append(totalValue);
-      const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!window.confirm('Remove this transaction?')) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
+      const actionsCell = document.createElement('td'); actionsCell.className = 'row-actions'; const edit = document.createElement('button'); edit.className = 'icon-button'; edit.title = 'Edit'; edit.ariaLabel = 'Edit transaction'; edit.innerHTML = '<i class="ti ti-edit"></i>'; edit.onclick = () => openNewItem('transactionForm', 'Edit transaction', { id: transaction.id, accountId: transaction.accountId, type: transaction.type, amount: transaction.amount, description: transaction.description, category: transaction.category || 'General' }); const remove = document.createElement('button'); remove.className = 'icon-button danger-icon'; remove.title = 'Remove'; remove.ariaLabel = 'Remove transaction'; remove.innerHTML = '<i class="ti ti-trash"></i>'; remove.onclick = () => perform(async () => { if (!await confirmAction({ title: `Remove ${transaction.description}?`, description: 'This transaction will be removed from totals and account balances. The change is recorded in audit history.' })) return; await api(`/api/transactions/${encodeURIComponent(transaction.id)}`, 'DELETE'); await dashboard(); status('Transaction removed.', true); }); actionsCell.append(edit, remove); row.append(iconCell, main, total, actionsCell); recentTransactions.append(row);
     }
     renderTransactionChart(data.monthTransactions || []);
     const audits = $('auditList'); audits.replaceChildren();
@@ -319,17 +350,24 @@
 
   function renderPlanning(data, memberNames) {
     const budgets = $('budgetList'); budgets.replaceChildren();
-    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id); budgets.append(row); }
+    for (const budget of data.budgets || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${budget.category}<small>${budget.period}</small></td><td>${formatAmount(budget.amount)}</td><td>${budget.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit budget"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove budget"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('budgetForm', 'Edit budget proposal', { amount: budget.amount, period: budget.period, rationale: budget.rationale }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('budget', budget.id, budget.category); budgets.append(row); }
     const goals = $('goalList'); goals.replaceChildren();
-    for (const [index, goal] of (data.goals || []).entries()) { const card = document.createElement('article'); card.className = 'goal-card'; card.style.setProperty('--goal-index', String(Math.min(index, 4))); card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><strong>${goal.name}</strong><span>${formatAmount(goal.contributedAmount)} / ${formatAmount(goal.targetAmount)}</span><small>${goal.status}</small><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`; card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id); goals.append(card); } const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML='<i class="ti ti-plus"></i><span>New savings goal</span>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd);
+    const goalItems = data.goals || [];
+    for (const [index, goal] of goalItems.entries()) {
+      const card = document.createElement('article'); card.className = 'goal-card'; card.style.setProperty('--goal-index', String(Math.min(index, 4)));
+      const percent = goal.targetAmount > 0 ? Math.min(100, Math.round((goal.contributedAmount / goal.targetAmount) * 100)) : 0;
+      card.innerHTML = `<span class="goal-icon"><i class="ti ti-target"></i></span><div class="goal-card-copy"><strong>${goal.name}</strong><small>${goal.status === 'complete' ? 'Complete' : `${percent}% saved`}</small><span class="goal-progress"><span style="inline-size:${percent}%"></span></span></div><strong class="goal-card-total">${formatAmount(goal.contributedAmount)}<small>of ${formatAmount(goal.targetAmount)}</small></strong><div class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit goal"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove goal"><i class="ti ti-trash"></i></button></div>`;
+      card.querySelector('[title="Edit"]').onclick = () => openNewItem('goalForm', 'Edit savings goal', { name: goal.name, targetAmount: goal.targetAmount }); card.querySelector('[title="Remove"]').onclick = () => removePlanning('goal', goal.id, goal.name); goals.append(card);
+    }
+    const goalAdd = document.createElement('button'); goalAdd.type='button'; goalAdd.className='goal-card goal-card-add'; goalAdd.innerHTML = goalItems.length ? '<i class="ti ti-plus"></i><span>New savings goal</span>' : '<i class="ti ti-sparkles"></i><strong>Start a savings goal</strong><small>Give a shared plan a name and target.</small>'; goalAdd.onclick=()=>openNewItem('goalForm','New savings goal'); goals.append(goalAdd);
     const tasks = $('taskList'); tasks.replaceChildren();
-    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id); tasks.append(row); }
+    for (const task of data.tasks || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${task.title}<small>${memberNames[task.assigneeId] || 'Household member'}</small></td><td>${task.dueDate}</td><td>${task.status}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit task"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove task"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('taskForm', 'Edit required task', { title: task.title, dueDate: task.dueDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('task', task.id, task.title); tasks.append(row); }
     const subscriptions = $('subscriptionList'); subscriptions.replaceChildren();
-    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription', { name: subscription.name, price: subscription.price, cadence: subscription.cadence, nextRenewalDate: subscription.nextRenewalDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id); subscriptions.append(row); }
+    for (const subscription of data.subscriptions || []) { const row = document.createElement('tr'); row.innerHTML = `<td>${subscription.name}<small>${subscription.cadence}</small></td><td>${formatAmount(subscription.price)}</td><td>${subscription.nextRenewalDate}</td><td class="row-actions"><button class="icon-button" title="Edit" aria-label="Edit subscription"><i class="ti ti-edit"></i></button><button class="icon-button danger-icon" title="Remove" aria-label="Remove subscription"><i class="ti ti-trash"></i></button></td>`; row.querySelector('[title="Edit"]').onclick = () => openNewItem('subscriptionForm', 'Edit subscription', { name: subscription.name, price: subscription.price, cadence: subscription.cadence, nextRenewalDate: subscription.nextRenewalDate }); row.querySelector('[title="Remove"]').onclick = () => removePlanning('subscription', subscription.id, subscription.name); subscriptions.append(row); }
     const reminders = $('reminderList'); reminders.replaceChildren();
     for (const reminder of data.reminders || []) item(reminders, `Reminder · renewal ${reminder.renewalDate} · ${reminder.leadDays} days before`);
   }
-  async function removePlanning(type, id) { const labels = { budget: 'budget proposal', goal: 'savings goal', task: 'required task', subscription: 'subscription' }; const label = labels[type] || 'record'; if (!window.confirm(`Remove this ${label}? This cannot be undone.`)) return; await api(`/api/${type}s/${encodeURIComponent(id)}`, 'DELETE'); await dashboard(); status(`${label[0].toUpperCase() + label.slice(1)} removed.`, true); }
+  async function removePlanning(type, id, name = '') { const labels = { budget: 'budget proposal', goal: 'savings goal', task: 'required task', subscription: 'subscription' }; const label = labels[type] || 'record'; const subject = name ? `“${name}”` : `this ${label}`; if (!await confirmAction({ title: `Remove ${subject}?`, description: `This ${label} will be removed from the household. This action cannot be undone.` })) return; await api(`/api/${type}s/${encodeURIComponent(id)}`, 'DELETE'); await dashboard(); status(`${label[0].toUpperCase() + label.slice(1)} removed.`, true); }
 
   async function rules() {
     show('rulesPanel');
@@ -417,6 +455,7 @@
       const label = (session.userAgent || 'Unknown browser') + (session.current ? ' · Current session' : '') +
         ' · Last used ' + new Date(session.lastUsedAt).toLocaleString();
       item(sessions, label, button(session.current ? 'Sign out' : 'Revoke', async () => {
+        if (!await confirmAction({ title: session.current ? 'Sign out this session?' : 'Revoke this session?', description: session.current ? 'You will return to the sign-in page.' : `The session on ${session.userAgent || 'this browser'} will be signed out on its next request.`, action: session.current ? 'Sign out' : 'Revoke session' })) return;
         await api('/api/settings/sessions/' + encodeURIComponent(session.id), 'DELETE');
         if (session.current) { show('authPanel'); status('Signed out.', true); }
         else { await profile(); status('Session revoked.', true); }
@@ -436,8 +475,9 @@
         await profile();
       }));
       actions.append(button('Remove', async () => {
+        if (!await confirmAction({ title: `Remove passkey “${passkey.name}”?`, description: 'This device can no longer use this passkey to sign in. Other sign-in methods stay available.', action: 'Remove passkey' })) return;
         await api('/api/settings/passkeys/' + encodeURIComponent(passkey.id), 'DELETE');
-        await settings();
+        await profile(); status('Passkey removed.', true);
       }, true));
       item(passkeys, passkey.name + ' · Added ' + new Date(passkey.createdAt).toLocaleDateString(), actions);
     }
